@@ -3,6 +3,7 @@
 *.out
 engine/symtab_demo
 engine/symtab_stress
+*.exe
 
 # Python
 __pycache__/
