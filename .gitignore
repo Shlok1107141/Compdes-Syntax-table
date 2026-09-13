@@ -1,0 +1,19 @@
+# C
+*.o
+*.out
+engine/symtab_demo
+engine/symtab_stress
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Node
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
