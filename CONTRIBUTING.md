@@ -21,7 +21,7 @@ Our sprint divides ownership across four primary domains. Before making major st
   - Isolated engine variants (trie-only, arena-only, bitpack-only, pairwise combinations).
   - Stress testing benchmarks across scaling $N$ values.
   - Data generation for comparative paper figures.
-- **Paper, Security & Testing** (Owner: *Eben*):
+- **Paper, Security & Testing** (Owner: [**Eben**](https://github.com/Eben923) - `@Eben923`):
   - Research paper drafts (Problem, Methodology, Results, Discussion).
   - Targeted security auditing (subprocess memory/time bounds, input size limits, CORS).
   - Adversarial and edge-case end-to-end testing.

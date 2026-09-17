@@ -47,7 +47,7 @@ If you identify a security flaw or an edge case that could lead to memory corrup
 2. Reach out directly to the project team leads:
    - [**Shlok**](https://github.com/Shlok1107141) (`@Shlok1107141`) - Engine & Backend Lead
    - [**Sagnik Datta**](https://github.com/armoredglock) (`@armoredglock`) - Frontend Lead
-   - **Eben** - Security & Testing Lead
+   - [**Eben**](https://github.com/Eben923) (`@Eben923`) - Security & Testing Lead
 3. Please include:
    - The crafted input payload causing the failure.
    - Execution environment and GCC/Clang sanitizer logs if applicable.
