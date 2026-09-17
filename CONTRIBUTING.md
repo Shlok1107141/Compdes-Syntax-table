@@ -8,16 +8,16 @@ Thank you for contributing to the **Memory-Constrained Compressed Symbol Table**
 
 Our sprint divides ownership across four primary domains. Before making major structural modifications outside your area, coordinate with the respective owner:
 
-- **Engine & Backend** (Owner: *Shlok*):
+- **Engine & Backend** (Owner: [**Shlok**](https://github.com/Shlok1107141) - `@Shlok1107141`):
   - C lexer, parser, scope tracker, and symbol table implementations (`engine/`).
   - FastAPI web server and subprocess execution harness (`backend/`).
   - API contract maintenance (`POST /analyze`).
-- **Frontend** (Owner: *Sagnik Datta*):
+- **Frontend** (Owner: [**Sagnik Datta**](https://github.com/armoredglock) - `@armoredglock`):
   - React/Vite web application (`frontend/`).
   - Code input interface, live stats & memory comparison charts.
   - Parsed symbol table viewer and Radix trie visualization.
   - Client-side error handling and mock fallbacks.
-- **Ablation Study** (Owner: *Hardik*):
+- **Ablation Study** (Owner: [**Hardik**](https://github.com/hardikpardik) - `@hardikpardik`):
   - Isolated engine variants (trie-only, arena-only, bitpack-only, pairwise combinations).
   - Stress testing benchmarks across scaling $N$ values.
   - Data generation for comparative paper figures.
