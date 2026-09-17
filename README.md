@@ -197,9 +197,9 @@ Analyzes user-submitted C-like source code and computes memory metrics across sy
 
 | Contributor | Area of Ownership | Deliverables |
 | :--- | :--- | :--- |
-| **Shlok** | Engine + Backend | C Lexer/Scope tracker, FastAPI wrapper, subprocess execution, API contract |
-| **Sagnik Datta** | Frontend | Interactive web UI, live metrics, symbol table view, Radix trie visualizer |
-| **Hardik** | Ablation Study | 7-configuration engine variants, scaling measurements, ablation comparison matrix |
+| [**Shlok**](https://github.com/Shlok1107141) (`@Shlok1107141`) | Engine + Backend | C Lexer/Scope tracker, FastAPI wrapper, subprocess execution, API contract |
+| [**Sagnik Datta**](https://github.com/armoredglock) (`@armoredglock`) | Frontend | Interactive web UI, live metrics, symbol table view, Radix trie visualizer |
+| [**Hardik**](https://github.com/hardikpardik) (`@hardikpardik`) | Ablation Study | 7-configuration engine variants, scaling measurements, ablation comparison matrix |
 | **Eben** | Paper + Security + Testing | Research paper, adversarial input testing, subprocess security auditing |
 
 ---
