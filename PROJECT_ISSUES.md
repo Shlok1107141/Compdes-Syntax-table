@@ -15,6 +15,12 @@ This document tracks all active, assigned, and completed sprint issues across th
 | [#7](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/7) | Engine | Implement Lexical Scope Tracker & Declaration Resolver | [@Shlok1107141](https://github.com/Shlok1107141) | `P0-critical` | **OPEN** |
 | [#8](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/8) | Engine | Connect Lexer & Scope Tracker to Compressed Engine Core | [@Shlok1107141](https://github.com/Shlok1107141) | `P0-critical` | **OPEN** |
 | [#9](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/9) | Backend | Build FastAPI Subprocess Wrapper & Sandboxed `/analyze` Endpoint | [@Shlok1107141](https://github.com/Shlok1107141) | `P0-critical` | **OPEN** |
+| [#18](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/18) | Frontend | Scaffold React+Vite Webapp & Configure CI/CD Pipeline | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
+| [#19](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/19) | Frontend | Build Monospace Code Input Panel & Preset Selector | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
+| [#20](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/20) | Frontend | Build Live Metrics Dashboard & 7-Configuration Ablation Chart | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
+| [#21](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/21) | Frontend | Build Parsed Symbol Table Inspector & Bit-Packed Word Visualizer | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
+| [#22](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/22) | Frontend | Build Interactive Radix (Patricia) Trie Visualizer (Showcase Demo) | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
+| [#23](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/23) | Frontend | Implement Dual Mode (Simulated Mock vs Live API) & Failure State UX | [@armoredglock](https://github.com/armoredglock) | `P0-critical` | **CLOSED (PR #5)** |
 | [#10](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/10) | Frontend | Live Backend Integration & Error State Hardening | [@armoredglock](https://github.com/armoredglock) | `P1-high` | **OPEN** |
 | [#11](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/11) | Ablation | Implement 3 Isolated Single-Technique Engine Variants | [@hardikpardik](https://github.com/hardikpardik) | `P0-critical` | **OPEN** |
 | [#12](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/12) | Ablation | Implement 3 Pairwise Combination Engine Variants | [@hardikpardik](https://github.com/hardikpardik) | `P0-critical` | **OPEN** |
@@ -22,8 +28,6 @@ This document tracks all active, assigned, and completed sprint issues across th
 | [#14](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/14) | Paper | Research Paper Draft - Problem, Architecture & Methodology | [@Eben923](https://github.com/Eben923) | `P1-high` | **OPEN** |
 | [#15](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/15) | Paper | Research Paper Results & Discussion Synthesis | [@Eben923](https://github.com/Eben923) | `P0-critical` | **OPEN** |
 | [#16](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/16) | Testing | Adversarial End-to-End Test Suite Execution | [@Eben923](https://github.com/Eben923) | `P0-critical` | **OPEN** |
-
-*(Note: Prior frontend milestones covering framework scaffolding, code editor, live metrics cards, 7-configuration ablation bar chart, symbol table inspector, and the Radix Trie visualizer were delivered and merged in [Pull Request #5](https://github.com/Shlok1107141/Compdes-Syntax-table/pull/5)).*
 
 ---
 
@@ -69,7 +73,32 @@ This document tracks all active, assigned, and completed sprint issues across th
 
 ### 2. Sagnik Datta (`@armoredglock`) — Frontend
 
+#### [Issue #18](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/18): Scaffold React+Vite Webapp & Configure CI/CD Pipeline
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Scaffold React 19, Vite, TypeScript, and Tailwind CSS v4 in `frontend/`, ensuring clean automated build and lint passes on GitHub Actions CI.
+
+#### [Issue #19](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/19): Build Monospace Code Input Panel & Preset Selector
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Create developer-friendly code editor with line numbering, payload byte counter against the 64 KB limit, and 4 preloaded embedded C presets.
+
+#### [Issue #20](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/20): Build Live Metrics Dashboard & 7-Configuration Ablation Chart
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Display Hero % memory saved metric, side-by-side RAM cards, and the 7-configuration horizontal comparison bar chart.
+
+#### [Issue #21](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/21): Build Parsed Symbol Table Inspector & Bit-Packed Word Visualizer
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Implement filterable/searchable symbol table with 32-bit packed hexadecimal/binary word inspector and JSON export.
+
+#### [Issue #22](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/22): Build Interactive Radix (Patricia) Trie Visualizer (Showcase Demo)
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Render interactive tree graph showing shared prefix edge deduplication, 16-bit arena index tags (`arena[#]`), and zoom/pan controls.
+
+#### [Issue #23](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/23): Implement Dual Mode (Simulated Mock vs Live API) & Failure State UX
+- **Status**: **CLOSED** (Delivered & verified in PR #5)
+- **Objective**: Provide offline client-side simulation engine matching `symtab_demo.c` alongside live API switching and error banner fallback handling.
+
 #### [Issue #10](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/10): Live Backend Integration & Error State Hardening
+- **Status**: **OPEN** (Awaiting Shlok's backend deployment)
 - **Objective**: Wire and harden live API communication once Shlok's FastAPI server is deployed.
 - **Tasks**:
   - [ ] Switch frontend navbar toggle from "Simulated Mode" to "Live Backend".
