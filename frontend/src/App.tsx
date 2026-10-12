@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { CodeEditor } from './components/CodeEditor';
 import { MetricsDashboard } from './components/MetricsDashboard';
@@ -7,7 +7,7 @@ import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
-import { analyzeCode, analyzeCodeSimulated } from './services/api';
+import { analyzeCode, analyzeCodeSimulated, checkBackendHealth } from './services/api';
 import type { AnalyzeResponse, ExecutionMode } from './types';
 import { BarChart3, Hash, Network } from 'lucide-react';
 
@@ -61,6 +61,19 @@ export function App() {
     []
   );
 
+  // Probe backend health status on mount
+  useEffect(() => {
+    let isMounted = true;
+    checkBackendHealth().then((health) => {
+      if (isMounted) {
+        setIsBackendAvailable(health.online && Boolean(health.engineReady));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleSelectPreset = (preset: SamplePreset) => {
     setSelectedPresetId(preset.id);
     setCode(preset.code);
@@ -69,6 +82,11 @@ export function App() {
 
   const handleToggleMode = (newMode: ExecutionMode) => {
     setMode(newMode);
+    if (newMode === 'live') {
+      checkBackendHealth().then((health) => {
+        setIsBackendAvailable(health.online && Boolean(health.engineReady));
+      });
+    }
     runAnalysis(code, newMode);
   };
 
