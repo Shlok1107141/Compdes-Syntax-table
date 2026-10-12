@@ -36,9 +36,32 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
 
         {/* Controls & Badges */}
         <div className="flex items-center space-x-3">
+          {mode === 'live' && (
+            <div
+              className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border ${
+                isBackendAvailable
+                  ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-300'
+                  : 'bg-amber-950/50 border-amber-500/30 text-amber-300'
+              }`}
+              title={
+                isBackendAvailable
+                  ? 'Connected to FastAPI backend with C engine ready'
+                  : 'Backend server not responding at http://localhost:8000'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isBackendAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`}
+              />
+              <span>{isBackendAvailable ? 'Engine Online' : 'Engine Offline'}</span>
+            </div>
+          )}
+
           {/* Mode Toggle Button */}
           <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
             <button
+              type="button"
               onClick={() => onToggleMode('mock')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
                 mode === 'mock'
@@ -51,6 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
               <span>Simulated Mode</span>
             </button>
             <button
+              type="button"
               onClick={() => onToggleMode('live')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
                 mode === 'live'
