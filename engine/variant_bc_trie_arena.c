@@ -11,15 +11,14 @@
  * Because edge labels are (offset, length) views into one char pool, an edge
  * split just re-slices the existing bytes: no label is copied or freed.
  *
- * Accounting: bytes USED in the three arenas (same convention as Variant B).
+ * Redeclaration: the node points at the newest metadata; each older one is
+ * remembered by a 4 B ArenaShadow record. Unique names never use one.
+ *
+ * Accounting: bytes USED in the arenas (same convention as Variant B).
  */
 #include "symtab_common.h"
 
-#define NIL        0xFFFF
-#define ROOT       0
-#define MAX_NODES  2048
-#define MAX_CHARS  8192
-#define MAX_SYMS   512
+#define ROOT 0
 
 typedef struct {
     uint16_t first_child;    /* node index, NIL if none          */
@@ -32,15 +31,16 @@ typedef struct {
 
 typedef struct { int type, scope, storage_class, offset; } Meta;   /* unpacked */
 
-static TrieNode node_pool[MAX_NODES];
-static uint16_t node_count;
-static char     char_pool[MAX_CHARS];
-static uint16_t char_used;
-static Meta     meta_pool[MAX_SYMS];
-static uint16_t meta_count;
+static TrieNode    node_pool[ARENA_MAX_ITEMS];
+static uint16_t    node_count;
+static char        char_pool[ARENA_MAX_CHARS];
+static uint16_t    char_used;
+static Meta        meta_pool[ARENA_MAX_ITEMS];
+static uint16_t    meta_count;
+static ArenaShadow shadow_pool[ARENA_MAX_ITEMS];
+static uint16_t    shadow_count;
 
 static uint16_t new_node(void) {
-    if (node_count >= MAX_NODES) { fprintf(stderr, "node arena full\n"); exit(1); }
     uint16_t id = node_count++;
     node_pool[id].first_child = NIL;
     node_pool[id].next_sibling = NIL;
@@ -52,26 +52,25 @@ static uint16_t new_node(void) {
 }
 
 static uint16_t pool_store(const char *chars, size_t len) {
-    if ((size_t)char_used + len > MAX_CHARS) { fprintf(stderr, "char arena full\n"); exit(1); }
     uint16_t off = char_used;
     memcpy(&char_pool[off], chars, len);
     char_used = (uint16_t)(char_used + len);
     return off;
 }
 
-static uint16_t store_meta(const TestSymbol *s) {
-    if (meta_count >= MAX_SYMS) { fprintf(stderr, "meta arena full\n"); exit(1); }
+static void add_declaration(uint16_t node, const TestSymbol *s) {
+    if (node_pool[node].is_leaf) {
+        shadow_pool[shadow_count].node = node;
+        shadow_pool[shadow_count].older = node_pool[node].symbol_id;
+        shadow_count++;
+    }
     Meta *m = &meta_pool[meta_count];
     m->type = s->type;
     m->scope = s->scope;
     m->storage_class = s->storage_class;
     m->offset = s->offset;
-    return meta_count++;
-}
-
-static void make_terminal(uint16_t node, const TestSymbol *s) {
     node_pool[node].is_leaf = 1;
-    node_pool[node].symbol_id = store_meta(s);
+    node_pool[node].symbol_id = meta_count++;
 }
 
 /* Slot of the sibling list that holds a child whose edge starts with c,
@@ -87,13 +86,19 @@ static void bc_init(void) {
     node_count = 0;
     char_used = 0;
     meta_count = 0;
+    shadow_count = 0;
     (void)new_node();            /* index 0 = ROOT; fields set to NIL, not 0 */
 }
 
-static void bc_insert(const TestSymbol *s) {
+static int bc_insert(const TestSymbol *s) {
     const char *key = s->name;
     size_t len = strlen(key), pos = 0;
     uint16_t cur = ROOT;
+
+    /* Worst case for one insert: two nodes, every character, one metadata
+     * record, one shadow record. Refuse up front rather than half-insert. */
+    if ((size_t)node_count + 2 > ARENA_MAX_ITEMS || (size_t)char_used + len > ARENA_MAX_CHARS ||
+        meta_count >= ARENA_MAX_ITEMS || shadow_count >= ARENA_MAX_ITEMS) return -1;
 
     while (pos < len) {
         uint16_t *slot = find_child_slot(cur, key[pos]);
@@ -102,9 +107,9 @@ static void bc_insert(const TestSymbol *s) {
             uint16_t leaf = new_node();
             node_pool[leaf].edge_offset = pool_store(key + pos, len - pos);
             node_pool[leaf].edge_len = (uint8_t)(len - pos);
-            make_terminal(leaf, s);
+            add_declaration(leaf, s);
             *slot = leaf;
-            return;
+            return 0;
         }
 
         uint16_t child = *slot;
@@ -118,8 +123,8 @@ static void bc_insert(const TestSymbol *s) {
             pos += cp;
             cur = child;
             if (pos == len) {
-                if (!node_pool[cur].is_leaf) make_terminal(cur, s);
-                return;
+                add_declaration(cur, s);
+                return 0;
             }
             continue;
         }
@@ -139,18 +144,20 @@ static void bc_insert(const TestSymbol *s) {
 
         size_t remaining = len - (pos + cp);
         if (remaining == 0) {
-            make_terminal(mid, s);
+            add_declaration(mid, s);
         } else {
             uint16_t leaf = new_node();
             node_pool[leaf].edge_offset = pool_store(key + pos + cp, remaining);
             node_pool[leaf].edge_len = (uint8_t)remaining;
-            make_terminal(leaf, s);
+            add_declaration(leaf, s);
             node_pool[child].next_sibling = leaf;
         }
-        return;
+        return 0;
     }
+    return 0;
 }
 
+/* Node that terminates key, or NIL. */
 static uint16_t bc_find(const char *key) {
     size_t len = strlen(key), pos = 0;
     uint16_t cur = ROOT;
@@ -164,41 +171,48 @@ static uint16_t bc_find(const char *key) {
         pos += e_len;
         cur = child;
     }
-    return node_pool[cur].is_leaf ? node_pool[cur].symbol_id : NIL;
+    return node_pool[cur].is_leaf ? cur : NIL;
+}
+
+static int meta_matches(uint16_t id, const TestSymbol *s) {
+    const Meta *m = &meta_pool[id];
+    return fields_match(m->type, m->scope, m->storage_class, m->offset, s);
 }
 
 static int bc_verify(const TestSymbol *s) {
-    uint16_t id = bc_find(s->name);
-    if (id == NIL) return 0;
-    const Meta *m = &meta_pool[id];
-    return m->type == s->type && m->scope == s->scope &&
-           m->storage_class == s->storage_class && m->offset == s->offset;
+    uint16_t node = bc_find(s->name);
+    if (node == NIL) return 0;
+    if (meta_matches(node_pool[node].symbol_id, s)) return 1;
+    for (uint16_t i = 0; i < shadow_count; i++)
+        if (shadow_pool[i].node == node && meta_matches(shadow_pool[i].older, s)) return 1;
+    return 0;
 }
 static int bc_absent(const char *k) { return bc_find(k) == NIL; }
 
 static size_t bc_total(void) {
     return (size_t)node_count * sizeof(TrieNode)
          + (size_t)char_used
-         + (size_t)meta_count * sizeof(Meta);
-}
-static size_t full_name_bytes(void) {
-    size_t t = 0;
-    for (size_t i = 0; i < NUM_SYMBOLS; i++) t += strlen(TEST_SYMBOLS[i].name) + 1;
-    return t;
+         + (size_t)meta_count * sizeof(Meta)
+         + (size_t)shadow_count * sizeof(ArenaShadow);
 }
 static void bc_breakdown(void) {
     printf("    sizeof(TrieNode)     : %zu B, sizeof(Meta) = %zu B\n", sizeof(TrieNode), sizeof(Meta));
     printf("    trie nodes           : %u x %zu = %zu B (incl. root)\n", (unsigned)node_count,
            sizeof(TrieNode), (size_t)node_count * sizeof(TrieNode));
     printf("    char pool            : %u B  (vs %zu B of full names in baseline)\n",
-           (unsigned)char_used, full_name_bytes());
+           (unsigned)char_used, test_name_bytes());
     printf("    meta pool            : %u x %zu = %zu B (unpacked)\n", (unsigned)meta_count,
            sizeof(Meta), (size_t)meta_count * sizeof(Meta));
     printf("    allocator overhead   : 0 B (no malloc)\n");
 }
 
+static void bc_destroy(void) { bc_init(); }   /* static arenas: nothing to free */
+
+const Impl bc_impl = { "VARIANT BC (radix trie + arena/16-bit indices, unpacked meta)",
+                       bc_init, bc_insert, bc_verify, bc_absent, bc_total, bc_breakdown, bc_destroy };
+
+#ifndef SYMTAB_NO_MAIN
 int main(void) {
-    static const Impl v = { "VARIANT BC (radix trie + arena/16-bit indices, unpacked meta)",
-                            bc_init, bc_insert, bc_verify, bc_absent, bc_total, bc_breakdown };
-    return run_experiment("Variant BC: trie + arena", &v);
+    return run_experiment("Variant BC: trie + arena", &bc_impl);
 }
+#endif

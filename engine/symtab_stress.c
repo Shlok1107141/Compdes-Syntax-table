@@ -7,11 +7,10 @@
  *   cc ... -DCFG=ab -DCFG_LABEL='"AB"' -DVARIANT_SRC='"variant_ab_arena_bitpack.c"' \
  *          symtab_stress.c
  *
- * The variant's source file is #included UNMODIFIED (its demo main() is
- * renamed away), so the exact code validated on days 1-2 is what gets
- * measured here, along with the unchanged symtab_common.h baseline and
- * accounting model. Every variant uses the function prefix <cfg>_init,
- * <cfg>_insert, <cfg>_verify, <cfg>_absent, <cfg>_total, <cfg>_breakdown.
+ * The variant's source file is #included as-is with SYMTAB_NO_MAIN defined
+ * (so its demo main() drops out), so the exact code the analyzer links is
+ * what gets measured here, along with the symtab_common.h baseline and
+ * accounting model. Every variant exports `const Impl <cfg>_impl`.
  *
  * For every pattern x n it:
  *   1. generates a deterministic symbol set (same set for every config),
@@ -53,18 +52,12 @@ int main(void) {
 #error "define VARIANT_SRC (variant source file, e.g. -DVARIANT_SRC='\"variant_ab_arena_bitpack.c\"')"
 #endif
 
-#define main variant_demo_main      /* keep the variant's own demo main out of the way */
+#define SYMTAB_NO_MAIN              /* keep the variant's own demo main out of the way */
 #include VARIANT_SRC
-#undef main
 
 #define ST_PASTE_(a, b) a##b
 #define ST_PASTE(a, b)  ST_PASTE_(a, b)
-
-static const Impl st_variant = {
-    CFG_LABEL,
-    ST_PASTE(CFG, _init),  ST_PASTE(CFG, _insert), ST_PASTE(CFG, _verify),
-    ST_PASTE(CFG, _absent), ST_PASTE(CFG, _total), ST_PASTE(CFG, _breakdown)
-};
+#define st_variant      ST_PASTE(CFG, _impl)   /* e.g. ab_impl, exported by the variant */
 
 /* ---------------- deterministic RNG (splitmix64) ---------------- */
 #define ST_MAX_N     300
@@ -198,11 +191,16 @@ static int st_run_one(int pattern, const char *pname, size_t n, uint64_t seed) {
     if (pattern == 0) st_gen_realistic(&r, n, syms, names);
     else              st_gen_random(&r, n, syms, names);
 
+    int ok = 1;
     base->init();
     var->init();
-    for (size_t i = 0; i < n; i++) { base->insert(&syms[i]); var->insert(&syms[i]); }
+    for (size_t i = 0; i < n; i++) {
+        if (base->insert(&syms[i]) != 0 || var->insert(&syms[i]) != 0) {
+            fprintf(stderr, "[%s/%s/n=%zu] insert failed (arena full) '%s'\n", CFG_LABEL, pname, n, syms[i].name);
+            ok = 0;
+        }
+    }
 
-    int ok = 1;
     for (size_t i = 0; i < n; i++) {
         if (!base->verify(&syms[i])) { fprintf(stderr, "[%s/%s/n=%zu] BASELINE mismatch '%s'\n", CFG_LABEL, pname, n, syms[i].name); ok = 0; }
         if (!var->verify(&syms[i]))  { fprintf(stderr, "[%s/%s/n=%zu] VARIANT mismatch '%s'\n",  CFG_LABEL, pname, n, syms[i].name); ok = 0; }
@@ -228,10 +226,12 @@ static int st_run_one(int pattern, const char *pname, size_t n, uint64_t seed) {
             fprintf(stderr, "[%s/%s/n=%zu] extension false positive '%s'\n", CFG_LABEL, pname, n, probe); ok = 0;
         }
     }
-    if (!ok) return 1;
+    if (ok)
+        printf("%s, %s, %zu, %zu, %zu\n", CFG_LABEL, pname, n, base->total_bytes(), var->total_bytes());
 
-    printf("%s, %s, %zu, %zu, %zu\n", CFG_LABEL, pname, n, base->total_bytes(), var->total_bytes());
-    return 0;
+    base->destroy();
+    var->destroy();
+    return ok ? 0 : 1;
 }
 
 int main(int argc, char **argv) {

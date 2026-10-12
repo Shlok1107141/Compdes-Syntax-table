@@ -6,13 +6,16 @@ ALL = variant_a_bitpack variant_b_arena variant_c_trie \
       variant_ab_arena_bitpack variant_ac_trie_bitpack variant_bc_trie_arena \
       variant_abc_full
 
+# The analyzer links every variant; SYMTAB_NO_MAIN drops their demo main()s.
+ANALYZE_SRCS = symtab_analyze.c $(addsuffix .c,$(ALL))
+
 all: $(ALL) symtab_analyze
 
 variant_%: variant_%.c symtab_common.h
 	$(CC) $(CFLAGS) -o $@ $<
 
-symtab_analyze: symtab_analyze.c
-	$(CC) $(CFLAGS) -o $@ $<
+symtab_analyze: $(ANALYZE_SRCS) symtab_common.h
+	$(CC) $(CFLAGS) -DSYMTAB_NO_MAIN -o $@ $(ANALYZE_SRCS)
 
 run: all
 	@for v in $(ALL); do ./$$v; done
@@ -22,7 +25,7 @@ sweep:
 
 # Testing standard: verify under sanitizers, then measure.
 check:
-	$(CC) $(SANFLAGS) -o symtab_analyze_san symtab_analyze.c
+	$(CC) $(SANFLAGS) -DSYMTAB_NO_MAIN -o symtab_analyze_san $(ANALYZE_SRCS)
 	printf 'int counter; int counter_max;\n' | ./symtab_analyze_san > /dev/null
 	@echo "sanitizer check: clean"
 

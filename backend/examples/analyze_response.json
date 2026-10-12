@@ -103,11 +103,17 @@
     }
   ],
   "ablation": {
-    "trie_only": 1599,
-    "arena_only": 532,
     "bitpack_only": 1420,
-    "trie_arena": 453,
-    "trie_bitpack": 1031,
-    "arena_bitpack": 364
+    "arena_only": 532,
+    "trie_only": 1663,
+    "arena_bitpack": 364,
+    "trie_bitpack": 1095,
+    "trie_arena": 453
+  },
+  "peak": {
+    "baseline_bytes": 1325,
+    "compressed_bytes": 244,
+    "savings_pct": 81.58,
+    "live_symbols": 11
   }
 }

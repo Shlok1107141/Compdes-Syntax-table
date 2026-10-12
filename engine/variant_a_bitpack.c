@@ -21,42 +21,33 @@ typedef struct PNode {
 static PNode  *buckets[HASH_BUCKETS];
 static Tracker T;
 
-static uint32_t pack_meta(uint8_t type, uint8_t scope, uint8_t sc, uint16_t off) {
-    return ((uint32_t)(type & 0xF) << 28) | ((uint32_t)scope << 20)
-         | ((uint32_t)(sc & 0xF) << 16)   | (uint32_t)off;
-}
-static void unpack_meta(uint32_t m, uint8_t *type, uint8_t *scope, uint8_t *sc, uint16_t *off) {
-    *type = (m >> 28) & 0xF; *scope = (m >> 20) & 0xFF;
-    *sc = (m >> 16) & 0xF;   *off = m & 0xFFFF;
-}
-
 static void a_init(void) { memset(buckets, 0, sizeof buckets); T.payload = T.allocs = 0; }
 
-static void a_insert(const TestSymbol *s) {
+static int a_insert(const TestSymbol *s) {
     PNode *n = t_alloc(&T, sizeof(PNode));
     n->name = t_alloc(&T, strlen(s->name) + 1);
     strcpy(n->name, s->name);
-    n->meta = pack_meta(s->type, s->scope, s->storage_class, s->offset);
+    n->meta = pack_symbol(s);
     unsigned b = hash_str(s->name);
     n->next = buckets[b];
     buckets[b] = n;
-}
-
-static PNode *a_find(const char *name) {
-    for (PNode *n = buckets[hash_str(name)]; n; n = n->next)
-        if (strcmp(n->name, name) == 0) return n;
-    return NULL;
+    return 0;
 }
 
 static int a_verify(const TestSymbol *s) {
-    PNode *n = a_find(s->name);
-    if (!n) return 0;
-    uint8_t t, sc, stc; uint16_t off;
-    unpack_meta(n->meta, &t, &sc, &stc, &off);
-    return t == s->type && sc == s->scope && stc == s->storage_class && off == s->offset;
+    for (PNode *n = buckets[hash_str(s->name)]; n; n = n->next)
+        if (strcmp(n->name, s->name) == 0 && packed_matches(n->meta, s)) return 1;
+    return 0;
 }
-static int a_absent(const char *k) { return a_find(k) == NULL; }
+
+static int a_absent(const char *k) {
+    for (PNode *n = buckets[hash_str(k)]; n; n = n->next)
+        if (strcmp(n->name, k) == 0) return 0;
+    return 1;
+}
+
 static size_t a_total(void) { return t_total(&T) + sizeof buckets; }
+
 static void a_breakdown(void) {
     printf("    sizeof(PNode)        : %zu B  (baseline HNode = %zu B)\n", sizeof(PNode), sizeof(HNode));
     printf("    bucket array         : %zu B\n", sizeof buckets);
@@ -64,8 +55,24 @@ static void a_breakdown(void) {
            T.allocs, T.payload, T.allocs * (size_t)MALLOC_OVERHEAD);
 }
 
-int main(void) {
-    static const Impl v = { "VARIANT A (bit-packed metadata only)",
-                            a_init, a_insert, a_verify, a_absent, a_total, a_breakdown };
-    return run_experiment("Variant A: bit-packing in isolation", &v);
+static void a_destroy(void) {
+    for (size_t b = 0; b < HASH_BUCKETS; b++) {
+        PNode *n = buckets[b];
+        while (n) {
+            PNode *next = n->next;
+            t_free(&T, n->name, strlen(n->name) + 1);
+            t_free(&T, n, sizeof(PNode));
+            n = next;
+        }
+        buckets[b] = NULL;
+    }
 }
+
+const Impl a_impl = { "VARIANT A (bit-packed metadata only)",
+                      a_init, a_insert, a_verify, a_absent, a_total, a_breakdown, a_destroy };
+
+#ifndef SYMTAB_NO_MAIN
+int main(void) {
+    return run_experiment("Variant A: bit-packing in isolation", &a_impl);
+}
+#endif

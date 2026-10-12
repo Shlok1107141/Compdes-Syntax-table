@@ -6,7 +6,7 @@ import main
 
 from conftest import SAMPLE_SOURCE
 
-CONTRACT_KEYS = {"baseline_bytes", "compressed_bytes", "savings_pct", "symbol_table", "ablation"}
+CONTRACT_KEYS = {"baseline_bytes", "compressed_bytes", "savings_pct", "symbol_table", "ablation", "peak"}
 
 
 def test_health_reports_a_ready_engine(client):
