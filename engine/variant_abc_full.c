@@ -173,6 +173,19 @@ static int abc_verify(const TestSymbol *s) {
 }
 static int abc_absent(const char *k) { return abc_find(k) == NIL; }
 
+/* Every declaration of `name`, newest first, as metadata indices -- which are
+ * insertion order, since each insert stores exactly one word. This is what a
+ * compiler walks to resolve a use: the first one whose scope is still open. */
+size_t abc_declarations(const char *name, uint16_t *out, size_t max) {
+    uint16_t node = abc_find(name);
+    size_t n = 0;
+    if (node == NIL || max == 0) return 0;
+    out[n++] = node_pool[node].symbol_id;
+    for (size_t i = shadow_count; i > 0 && n < max; i--)
+        if (shadow_pool[i - 1].node == node) out[n++] = shadow_pool[i - 1].older;
+    return n;
+}
+
 static size_t abc_total(void) {
     return (size_t)node_count * sizeof(TrieNode)
          + (size_t)char_used

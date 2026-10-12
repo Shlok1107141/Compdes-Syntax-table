@@ -95,6 +95,7 @@ static const char *STORAGE_NAMES[16] = {
 
 static void json_escape(const char *s, size_t len);
 static void release_all(void);
+static void record_use(size_t i, int at_stmt_start);
 
 /* Every exit path releases what it allocated, so LeakSanitizer stays quiet
  * on rejected input too -- not just on the success path. */
@@ -166,6 +167,63 @@ static size_t skip_quoted(size_t i, char quote) {
     return i;
 }
 
+/* Object-like integer macros (`#define BUF_LEN 16`), so `char buf[BUF_LEN];`
+ * gets its real size. The analyzer does not preprocess: anything more complex
+ * than "name, integer, optional comment" is ignored. */
+typedef struct {
+    char     name[64];
+    uint32_t value;
+} Macro;
+
+static Macro  macros[256];
+static size_t n_macros = 0;
+
+static size_t skip_blanks(size_t p, size_t end) {
+    while (p < end && (src[p] == ' ' || src[p] == '\t')) p++;
+    return p;
+}
+
+static void capture_define(size_t hash, size_t end) {
+    size_t p = skip_blanks(hash + 1, end);
+    if (end - p < 7 || memcmp(src + p, "define", 6) != 0 || (src[p + 6] != ' ' && src[p + 6] != '\t'))
+        return;
+
+    p = skip_blanks(p + 6, end);
+    size_t name_start = p;
+    while (p < end && is_id_char(src[p])) p++;
+    size_t name_len = p - name_start;
+    if (name_len == 0 || name_len >= sizeof(macros[0].name) || !is_id_start(src[name_start])) return;
+    if (p < end && src[p] == '(') return;                /* function-like macro */
+
+    p = skip_blanks(p, end);
+    char digits[32];
+    size_t n = 0;
+    while (p < end && is_id_char(src[p]) && n < sizeof(digits) - 1) digits[n++] = src[p++];
+    digits[n] = '\0';
+    if (n == 0 || !is_digit(digits[0])) return;
+
+    p = skip_blanks(p, end);                             /* only a comment may follow */
+    if (p < end && src[p] != '\r' && src[p] != '\n' &&
+        !(src[p] == '/' && p + 1 < end && (src[p + 1] == '/' || src[p + 1] == '*'))) return;
+
+    char *stop;
+    unsigned long value = strtoul(digits, &stop, 0);
+    while (*stop == 'u' || *stop == 'U' || *stop == 'l' || *stop == 'L') stop++;
+    if (*stop != '\0' || value > 0xFFFFFFFFul) return;
+
+    Macro *m = NULL;
+    for (size_t k = 0; k < n_macros && !m; k++)
+        if (strlen(macros[k].name) == name_len && memcmp(macros[k].name, src + name_start, name_len) == 0)
+            m = &macros[k];                              /* redefinition: last one wins */
+    if (!m) {
+        if (n_macros >= sizeof(macros) / sizeof(macros[0])) return;
+        m = &macros[n_macros++];
+        memcpy(m->name, src + name_start, name_len);
+        m->name[name_len] = '\0';
+    }
+    m->value = (uint32_t)value;
+}
+
 static void lex(void) {
     size_t i = 0;
     int at_line_start = 1;
@@ -176,7 +234,13 @@ static void lex(void) {
         if (c == '\n') { at_line_start = 1; i++; continue; }
         if (is_space(c)) { i++; continue; }
 
-        if (c == '#' && at_line_start) { i = skip_logical_line(i); at_line_start = 1; continue; }
+        if (c == '#' && at_line_start) {
+            size_t end = skip_logical_line(i);
+            capture_define(i, end);
+            i = end;
+            at_line_start = 1;
+            continue;
+        }
         at_line_start = 0;
 
         if (c == '/' && i + 1 < src_len && src[i + 1] == '/') { i = skip_logical_line(i); at_line_start = 1; continue; }
@@ -281,6 +345,7 @@ static size_t skip_initializer(size_t i) {
         } else if (depth == 0 && (tok_eq(i, ",") || tok_eq(i, ";"))) {
             return i;
         }
+        record_use(i, 0);
         i++;
     }
     return i;
@@ -411,6 +476,32 @@ static void record_scope_exit(int closing_depth) {
     n_scope_exits++;
 }
 
+/* Every identifier *use* (not a declaration), positioned among the
+ * declarations and scope exits so it can be resolved exactly where it
+ * appears: to the innermost declaration of that name still in scope. */
+typedef struct {
+    uint32_t tok;
+    uint32_t decls_before;
+    uint32_t exits_before;
+} UseEvent;
+
+static UseEvent uses[MAX_TOKENS];
+static size_t   n_uses = 0;
+
+static void record_use(size_t i, int at_stmt_start) {
+    if (!tok_is_ident(i) || tok_is_keyword(i)) return;
+    if (i > 0 && tok_eq(i - 1, ".")) return;                            /* s.member */
+    if (i > 1 && tok_eq(i - 1, ">") && tok_eq(i - 2, "-")) return;      /* p->member */
+    if (i > 0 && tok_eq(i - 1, "goto")) return;                         /* label */
+    if (at_stmt_start && tok_eq(i + 1, ":")) return;                    /* label: */
+    if (find_typedef(i)) return;                                        /* a type, not an object */
+    if (n_uses >= MAX_TOKENS) return;
+    uses[n_uses].tok = (uint32_t)i;
+    uses[n_uses].decls_before = (uint32_t)ndecl;
+    uses[n_uses].exits_before = (uint32_t)n_scope_exits;
+    n_uses++;
+}
+
 /* Set of names already declared as objects (not type names), so the check
  * below stays O(1) per token instead of scanning every declaration. */
 #define OBJ_SLOTS 16384u
@@ -441,6 +532,23 @@ static int declared_as_object(size_t i) {
         if (obj_slots[s] == 0) return 0;
         if (name_eq_tok(decls[obj_slots[s] - 1].name, i)) return 1;
     }
+    return 0;
+}
+
+/* Element count for `[ N ]` when N is a single integer literal or a captured
+ * #define; 0 (unknown) for anything else, e.g. `[N + 1]`. */
+static uint32_t array_length(size_t i) {
+    if (i + 1 >= ntok || !tok_eq(i + 1, "]")) return 0;
+    if (toks[i].kind == TK_NUM) {
+        char buf[32];
+        size_t n = toks[i].len < sizeof(buf) - 1 ? toks[i].len : sizeof(buf) - 1;
+        memcpy(buf, src + toks[i].pos, n);
+        buf[n] = '\0';
+        return (uint32_t)strtoul(buf, NULL, 0);
+    }
+    if (tok_is_ident(i))
+        for (size_t k = 0; k < n_macros; k++)
+            if (name_eq_tok(macros[k].name, i)) return macros[k].value;
     return 0;
 }
 
@@ -706,14 +814,7 @@ static size_t parse_declaration(size_t i, DeclCtx ctx) {
         if (!is_func_ptr) {
             while (i < ntok && toks[i].kind != TK_EOF) {
                 if (tok_eq(i, "[")) {
-                    uint32_t count = 0;
-                    if (i + 1 < ntok && toks[i + 1].kind == TK_NUM) {
-                        char buf[32];
-                        size_t n = toks[i + 1].len < sizeof(buf) - 1 ? toks[i + 1].len : sizeof(buf) - 1;
-                        memcpy(buf, src + toks[i + 1].pos, n);
-                        buf[n] = '\0';
-                        count = (uint32_t)strtoul(buf, NULL, 0);
-                    }
+                    uint32_t count = array_length(i + 1);
                     i = skip_group(i, "[", "]");
                     type = T_ARRAY;
                     if (count && size && count < 0x10000000u / (size ? size : 1)) size *= count;
@@ -843,6 +944,7 @@ static void parse_translation_unit(void) {
             if (next != (size_t)-1 && next > i) { i = next; stmt_start = 1; continue; }
         }
 
+        record_use(i, stmt_start);
         stmt_start = 0;
         i++;
     }
@@ -1006,6 +1108,125 @@ static void compute_peak(Peak *peak) {
 }
 
 /* ============================================================
+ * Scoped lookup: resolving every identifier use
+ *
+ * What a symbol table is for. The compressed (ABC) table is rebuilt in
+ * source order while scopes open and close; each use resolves to the newest
+ * declaration of its name whose scope is still open, walking the trie's
+ * declaration chain (abc_declarations). Struct members are a separate
+ * namespace in C and never resolve a bare name.
+ *
+ * Every resolution is checked against an independent reference resolver --
+ * per-name "previous declaration" links found by hashing, no trie -- so each
+ * request doubles as a differential test of the compressed table's lookup.
+ * ============================================================ */
+
+#define KEY_SLOTS 16384u
+
+static uint32_t references[MAX_DECLS];
+static uint8_t  in_scope[MAX_DECLS];
+static uint16_t open_decls[MAX_DECLS];   /* declarations whose scope is open */
+static uint16_t name_key[MAX_DECLS];     /* first declaration with the same name */
+static uint16_t prev_same[MAX_DECLS];    /* previous declaration of the same name, NIL */
+static uint16_t newest_by_key[MAX_DECLS];
+static uint16_t key_slots[KEY_SLOTS];    /* first-declaration index + 1; 0 = empty */
+static uint16_t chain[MAX_DECLS];
+static size_t   n_resolved = 0;
+
+static uint16_t key_lookup(const char *s, size_t len) {
+    uint32_t slot = name_hash(s, len) % KEY_SLOTS;
+    for (uint32_t probe = 0; probe < KEY_SLOTS; probe++) {
+        uint32_t k = (slot + probe) % KEY_SLOTS;
+        if (key_slots[k] == 0) return NIL;
+        const char *name = decls[key_slots[k] - 1].name;
+        if (strlen(name) == len && memcmp(name, s, len) == 0) return (uint16_t)(key_slots[k] - 1);
+    }
+    return NIL;
+}
+
+static void build_name_keys(void) {
+    for (size_t i = 0; i < ndecl; i++) {
+        size_t len = strlen(decls[i].name);
+        uint16_t key = key_lookup(decls[i].name, len);
+        if (key == NIL) {
+            uint32_t slot = name_hash(decls[i].name, len) % KEY_SLOTS;
+            while (key_slots[slot]) slot = (slot + 1) % KEY_SLOTS;
+            key_slots[slot] = (uint16_t)(i + 1);
+            key = (uint16_t)i;
+        }
+        name_key[i] = key;
+    }
+}
+
+static int resolvable(uint16_t d) {
+    return in_scope[d] && decls[d].storage_class != SC_MEMBER;
+}
+
+static void resolve_uses(void) {
+    size_t inserted = 0, exits_done = 0, open = 0;
+    char name[MAX_IDENT_LEN + 1];
+
+    build_name_keys();
+    for (size_t i = 0; i < ndecl; i++) newest_by_key[i] = NIL;
+
+    building = &abc_impl;
+    abc_impl.init();
+
+    for (size_t u = 0; u < n_uses; u++) {
+        /* Bring the table to the state at this use: declarations and scope
+         * exits interleaved exactly as they occurred. */
+        for (;;) {
+            size_t upto = exits_done < uses[u].exits_before
+                        ? scope_exits[exits_done].decls_before : uses[u].decls_before;
+            while (inserted < upto) {
+                if (abc_impl.insert(&symbols[inserted]) != 0)
+                    fail(2, "too many symbols for the 16-bit arena limits");
+                in_scope[inserted] = 1;
+                prev_same[inserted] = newest_by_key[name_key[inserted]];
+                newest_by_key[name_key[inserted]] = (uint16_t)inserted;
+                open_decls[open++] = (uint16_t)inserted;
+                inserted++;
+            }
+            if (exits_done >= uses[u].exits_before) break;
+            uint8_t closing = scope_exits[exits_done].depth;
+            while (open > 0 && decl_release[open_decls[open - 1]] >= closing)
+                in_scope[open_decls[--open]] = 0;
+            exits_done++;
+        }
+
+        const Token *t = &toks[uses[u].tok];
+        memcpy(name, src + t->pos, t->len);
+        name[t->len] = '\0';
+
+        /* Compressed table: newest declaration still in scope. */
+        uint16_t via_trie = NIL;
+        size_t n = abc_declarations(name, chain, MAX_DECLS);
+        for (size_t k = 0; k < n && via_trie == NIL; k++)
+            if (resolvable(chain[k])) via_trie = chain[k];
+
+        /* Reference resolver. */
+        uint16_t via_reference = NIL;
+        uint16_t key = key_lookup(name, t->len);
+        for (uint16_t d = key == NIL ? NIL : newest_by_key[key]; d != NIL; d = prev_same[d])
+            if (resolvable(d)) { via_reference = d; break; }
+
+        if (via_trie != via_reference) {
+            char msg[MAX_IDENT_LEN + 96];
+            snprintf(msg, sizeof msg,
+                     "scoped lookup in the compressed table disagrees with the reference on '%.60s'", name);
+            fail(3, msg);
+        }
+        if (via_trie != NIL) {
+            references[via_trie]++;
+            n_resolved++;
+        }
+    }
+
+    abc_impl.destroy();
+    building = NULL;
+}
+
+/* ============================================================
  * JSON output
  * ============================================================ */
 
@@ -1041,9 +1262,9 @@ static void print_json(const size_t totals[NUM_VARIANTS], const Peak *peak) {
         if (i) putchar(',');
         printf("{\"name\":\"");
         json_escape(d->name, strlen(d->name));
-        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u}",
+        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,\"references\":%u}",
                TYPE_NAMES[d->type & 0xF], (unsigned)d->scope,
-               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset);
+               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i]);
     }
     printf("],");
 
@@ -1056,8 +1277,9 @@ static void print_json(const size_t totals[NUM_VARIANTS], const Peak *peak) {
            "\"live_symbols\":%zu},",
            peak->baseline, peak->compressed, savings_pct(peak->baseline, peak->compressed), peak->live);
 
-    printf("\"stats\":{\"symbols\":%zu,\"scope_exits\":%zu,\"source_bytes\":%zu}}\n",
-           ndecl, n_scope_exits, src_len);
+    printf("\"stats\":{\"symbols\":%zu,\"scope_exits\":%zu,\"uses\":%zu,\"resolved\":%zu,"
+           "\"source_bytes\":%zu}}\n",
+           ndecl, n_scope_exits, n_uses, n_resolved, src_len);
 }
 
 /* ============================================================
@@ -1127,6 +1349,7 @@ int main(void) {
 
     Peak peak;
     compute_peak(&peak);
+    resolve_uses();
 
     print_json(totals, &peak);
     release_all();
