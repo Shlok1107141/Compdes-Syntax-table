@@ -19,6 +19,9 @@
  * Edge labels are heap strings without a NUL (length in edge_len). Splitting
  * an edge allocates the new prefix/suffix and frees the old label; only live
  * allocations at the end are charged.
+ *
+ * Redeclaration: the node keeps the newest word; each older one moves to a
+ * malloc'd ACShadow record. Unique-name workloads never allocate one.
  */
 #include "symtab_common.h"
 
@@ -31,19 +34,15 @@ typedef struct TNode {
     uint8_t is_term;               /* 1 if this node ends a stored identifier   */
 } TNode;
 
-static Tracker T;
-static TNode  *root;
+typedef struct ACShadow {
+    const TNode     *owner;        /* node whose name was redeclared  */
+    uint32_t         meta;         /* the older declaration, packed   */
+    struct ACShadow *next;
+} ACShadow;
 
-static uint32_t pack_meta(uint8_t type, uint8_t scope, uint8_t sc, uint16_t off) {
-    return ((uint32_t)(type & 0xF) << 28) | ((uint32_t)scope << 20)
-         | ((uint32_t)(sc & 0xF) << 16)   | (uint32_t)off;
-}
-static void unpack_meta(uint32_t m, uint8_t *type, uint8_t *scope, uint8_t *sc, uint16_t *off) {
-    *type = (uint8_t)((m >> 28) & 0xF);
-    *scope = (uint8_t)((m >> 20) & 0xFF);
-    *sc = (uint8_t)((m >> 16) & 0xF);
-    *off = (uint16_t)(m & 0xFFFF);
-}
+static Tracker   T;
+static TNode    *root;
+static ACShadow *shadows;
 
 static TNode *new_node(const char *edge, size_t len) {
     TNode *n = t_alloc(&T, sizeof(TNode));
@@ -60,8 +59,15 @@ static TNode *new_node(const char *edge, size_t len) {
     return n;
 }
 
-static void set_term(TNode *n, const TestSymbol *s) {
-    n->meta = pack_meta(s->type, s->scope, s->storage_class, s->offset);
+static void add_declaration(TNode *n, const TestSymbol *s) {
+    if (n->is_term) {
+        ACShadow *sh = t_alloc(&T, sizeof(ACShadow));
+        sh->owner = n;
+        sh->meta = n->meta;
+        sh->next = shadows;
+        shadows = sh;
+    }
+    n->meta = pack_symbol(s);
     n->is_term = 1;
 }
 
@@ -74,10 +80,11 @@ static TNode **find_child_slot(TNode *parent, char c) {
 static void ac_init(void) {
     T.payload = 0;
     T.allocs = 0;
+    shadows = NULL;
     root = new_node(NULL, 0);
 }
 
-static void ac_insert(const TestSymbol *s) {
+static int ac_insert(const TestSymbol *s) {
     const char *key = s->name;
     size_t len = strlen(key), pos = 0;
     TNode *cur = root;
@@ -87,9 +94,9 @@ static void ac_insert(const TestSymbol *s) {
 
         if (!*slot) {                              /* no matching edge: new leaf */
             TNode *leaf = new_node(key + pos, len - pos);
-            set_term(leaf, s);
+            add_declaration(leaf, s);
             *slot = leaf;
-            return;
+            return 0;
         }
 
         TNode *child = *slot;
@@ -100,8 +107,8 @@ static void ac_insert(const TestSymbol *s) {
             pos += cp;
             cur = child;
             if (pos == len) {
-                if (!cur->is_term) set_term(cur, s);
-                return;
+                add_declaration(cur, s);
+                return 0;
             }
             continue;
         }
@@ -123,14 +130,15 @@ static void ac_insert(const TestSymbol *s) {
 
         size_t rem = len - (pos + cp);
         if (rem == 0) {
-            set_term(mid, s);
+            add_declaration(mid, s);
         } else {
             TNode *leaf = new_node(key + pos + cp, rem);
-            set_term(leaf, s);
+            add_declaration(leaf, s);
             child->next_sibling = leaf;
         }
-        return;
+        return 0;
     }
+    return 0;
 }
 
 static const TNode *ac_find(const char *key) {
@@ -151,10 +159,10 @@ static const TNode *ac_find(const char *key) {
 static int ac_verify(const TestSymbol *s) {
     const TNode *n = ac_find(s->name);
     if (!n) return 0;
-    uint8_t t, sc, stc;
-    uint16_t off;
-    unpack_meta(n->meta, &t, &sc, &stc, &off);
-    return t == s->type && sc == s->scope && stc == s->storage_class && off == s->offset;
+    if (packed_matches(n->meta, s)) return 1;
+    for (const ACShadow *sh = shadows; sh; sh = sh->next)
+        if (sh->owner == n && packed_matches(sh->meta, s)) return 1;
+    return 0;
 }
 static int ac_absent(const char *k) { return ac_find(k) == NULL; }
 static size_t ac_total(void) { return t_total(&T); }
@@ -169,22 +177,41 @@ static size_t count_edge_bytes(const TNode *n) {
     for (const TNode *k = n->first_child; k; k = k->next_sibling) c += count_edge_bytes(k);
     return c;
 }
-static size_t full_name_bytes(void) {
-    size_t t = 0;
-    for (size_t i = 0; i < NUM_SYMBOLS; i++) t += strlen(TEST_SYMBOLS[i].name) + 1;
-    return t;
-}
 static void ac_breakdown(void) {
     printf("    sizeof(TNode)        : %zu B\n", sizeof(TNode));
     printf("    trie nodes           : %zu (incl. root)\n", count_nodes(root));
     printf("    edge label bytes     : %zu B  (vs %zu B of full names in baseline)\n",
-           count_edge_bytes(root), full_name_bytes());
+           count_edge_bytes(root), test_name_bytes());
     printf("    live allocations     : %zu (%zu B payload + %zu B overhead)\n",
            T.allocs, T.payload, T.allocs * (size_t)MALLOC_OVERHEAD);
 }
 
-int main(void) {
-    static const Impl v = { "VARIANT AC (radix trie + bit-packed meta, pointers + malloc)",
-                            ac_init, ac_insert, ac_verify, ac_absent, ac_total, ac_breakdown };
-    return run_experiment("Variant AC: trie + bit-packing", &v);
+static void free_subtree(TNode *n) {
+    TNode *child = n->first_child;
+    while (child) {
+        TNode *next = child->next_sibling;
+        free_subtree(child);
+        child = next;
+    }
+    if (n->edge) t_free(&T, n->edge, n->edge_len);
+    t_free(&T, n, sizeof(TNode));
 }
+
+static void ac_destroy(void) {
+    while (shadows) {
+        ACShadow *next = shadows->next;
+        t_free(&T, shadows, sizeof(ACShadow));
+        shadows = next;
+    }
+    if (root) free_subtree(root);
+    root = NULL;
+}
+
+const Impl ac_impl = { "VARIANT AC (radix trie + bit-packed meta, pointers + malloc)",
+                       ac_init, ac_insert, ac_verify, ac_absent, ac_total, ac_breakdown, ac_destroy };
+
+#ifndef SYMTAB_NO_MAIN
+int main(void) {
+    return run_experiment("Variant AC: trie + bit-packing", &ac_impl);
+}
+#endif

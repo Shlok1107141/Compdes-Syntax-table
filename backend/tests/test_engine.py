@@ -32,6 +32,7 @@ def test_declarations_get_type_scope_and_storage(run_engine):
     assert syms["counter_max"][0] == {
         "name": "counter_max", "type": "int", "scope": 0,
         "storage_class": "global", "offset": syms["counter_max"][0]["offset"],
+        "references": 0,
     }
     assert syms["counter"][0]["storage_class"] == "static"
     assert syms["temp_buffer"][0]["type"] == "array"
@@ -165,6 +166,82 @@ def test_all_three_techniques_win_on_prefix_sharing_names(run_engine):
 
     competitors = {**payload["ablation"], "baseline": payload["baseline_bytes"]}
     assert payload["compressed_bytes"] < min(competitors.values()), competitors
+
+
+# Byte totals the standalone variant demos print for the prototype's 30
+# identifiers (`make -C engine run`). The analyzer links the same variant code,
+# so per-request numbers and results.csv share one source of truth.
+PROTOTYPE_NAMES = """
+    counter counter_max counter_min counter_reset count count_all temp temp_max
+    temp_min temp_buffer sensor_id sensor_value sensor_read sensor_write led_pin
+    led_state led_toggle buffer buffer_size buffer_ptr status status_flag
+    status_code init init_flag main handler handler_id config config_flag
+""".split()
+
+DEMO_TOTALS = {
+    "baseline": 2725,
+    "bitpack_only": 2485,
+    "arena_only": 1021,
+    "trie_only": 4035,
+    "arena_bitpack": 661,
+    "trie_bitpack": 2747,
+    "trie_arena": 1029,
+    "compressed": 669,
+}
+
+
+def test_numbers_match_the_standalone_variant_demos(run_engine):
+    _, payload, _ = run_engine("".join(f"int {name};\n" for name in PROTOTYPE_NAMES))
+    measured = {
+        **payload["ablation"],
+        "baseline": payload["baseline_bytes"],
+        "compressed": payload["compressed_bytes"],
+    }
+    assert measured == DEMO_TOTALS
+
+
+def test_redeclaration_costs_one_word_and_one_shadow_record(run_engine):
+    """A trie stores a name once; a second declaration of it adds a packed
+    metadata word (4 B) and a shadow record (4 B) -- nothing else."""
+    _, once, _ = run_engine("void f(void) { { int x; } }")
+    _, twice, _ = run_engine("void f(void) { { int x; } { int x; } }")
+    assert twice["compressed_bytes"] - once["compressed_bytes"] == 8
+    # The baseline copies the name again: node + string, each with malloc overhead.
+    assert twice["baseline_bytes"] - once["baseline_bytes"] > 8
+
+
+def test_peak_counts_only_symbols_alive_together(run_engine):
+    source = """
+    int global_a;
+    void first(void) { int a1; int a2; int a3; }
+    void second(void) { int b1; }
+    """
+    _, payload, _ = run_engine(source)
+    peak = payload["peak"]
+    # Inside first(): global_a, first, a1, a2, a3. second() starts after they are released.
+    assert peak["live_symbols"] == 5
+    assert len(payload["symbol_table"]) == 7
+    assert peak["baseline_bytes"] < payload["baseline_bytes"]
+    assert peak["compressed_bytes"] < payload["compressed_bytes"]
+
+
+def test_peak_equals_whole_table_without_inner_scopes(run_engine):
+    _, payload, _ = run_engine("int a; int b; char c[4];")
+    peak = payload["peak"]
+    assert peak["live_symbols"] == 3
+    assert peak["baseline_bytes"] == payload["baseline_bytes"]
+    assert peak["compressed_bytes"] == payload["compressed_bytes"]
+
+
+def test_struct_members_live_as_long_as_their_struct(run_engine):
+    source = """
+    struct point { int x; int y; };
+    void f(void) { int local; }
+    void g(void) { int other; }
+    """
+    _, payload, _ = run_engine(source)
+    # point's members stay alive through both functions: x, y, f, local (then g, other).
+    assert payload["peak"]["live_symbols"] == 5
 
 
 def test_savings_percentage_matches_the_byte_counts(run_engine):

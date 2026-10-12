@@ -8,106 +8,126 @@
       "type": "int",
       "scope": 1,
       "storage_class": "member",
-      "offset": 0
+      "offset": 0,
+      "references": 0
     },
     {
       "name": "sensor_name",
       "type": "array",
       "scope": 1,
       "storage_class": "member",
-      "offset": 8
+      "offset": 8,
+      "references": 0
     },
     {
       "name": "counter",
       "type": "int",
       "scope": 0,
       "storage_class": "static",
-      "offset": 0
+      "offset": 0,
+      "references": 0
     },
     {
       "name": "counter_max",
       "type": "int",
       "scope": 0,
       "storage_class": "global",
-      "offset": 4
+      "offset": 4,
+      "references": 0
     },
     {
       "name": "temp_buffer",
       "type": "array",
       "scope": 0,
       "storage_class": "global",
-      "offset": 8
+      "offset": 8,
+      "references": 0
     },
     {
       "name": "sensor_read",
       "type": "function",
       "scope": 0,
       "storage_class": "global",
-      "offset": 0
+      "offset": 0,
+      "references": 0
     },
     {
       "name": "sensor_id",
       "type": "int",
       "scope": 1,
       "storage_class": "param",
-      "offset": 0
+      "offset": 0,
+      "references": 1
     },
     {
       "name": "out_buf",
       "type": "pointer",
       "scope": 1,
       "storage_class": "param",
-      "offset": 8
+      "offset": 8,
+      "references": 0
     },
     {
       "name": "call_count",
       "type": "int",
       "scope": 1,
       "storage_class": "static",
-      "offset": 16
+      "offset": 16,
+      "references": 0
     },
     {
       "name": "value",
       "type": "int",
       "scope": 1,
       "storage_class": "local",
-      "offset": 20
+      "offset": 20,
+      "references": 3
     },
     {
       "name": "clamped",
       "type": "int",
       "scope": 2,
       "storage_class": "local",
-      "offset": 24
+      "offset": 24,
+      "references": 1
     },
     {
       "name": "main",
       "type": "function",
       "scope": 0,
       "storage_class": "global",
-      "offset": 0
+      "offset": 0,
+      "references": 0
     },
     {
       "name": "counter",
       "type": "int",
       "scope": 1,
       "storage_class": "local",
-      "offset": 0
+      "offset": 0,
+      "references": 2
     },
     {
       "name": "i",
       "type": "int",
       "scope": 2,
       "storage_class": "local",
-      "offset": 4
+      "offset": 4,
+      "references": 3
     }
   ],
   "ablation": {
-    "trie_only": 1599,
-    "arena_only": 532,
     "bitpack_only": 1420,
-    "trie_arena": 453,
-    "trie_bitpack": 1031,
-    "arena_bitpack": 364
+    "arena_only": 532,
+    "trie_only": 1663,
+    "arena_bitpack": 364,
+    "trie_bitpack": 1095,
+    "trie_arena": 453
+  },
+  "peak": {
+    "baseline_bytes": 1325,
+    "compressed_bytes": 244,
+    "savings_pct": 81.58,
+    "live_symbols": 11
   }
 }

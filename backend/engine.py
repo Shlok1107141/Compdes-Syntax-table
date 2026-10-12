@@ -44,8 +44,7 @@ def engine_path() -> Path:
     if not path.is_file():
         raise EngineError(
             503,
-            f"analyzer binary not found at {path}; build it with "
-            f"'gcc engine/symtab_analyze.c -o engine/{BINARY_NAME} -Wall -Wextra'",
+            f"analyzer binary not found at {path}; build it with 'make -C engine symtab_analyze'",
         )
     return path
 

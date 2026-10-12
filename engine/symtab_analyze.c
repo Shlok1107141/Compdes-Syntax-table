@@ -7,20 +7,23 @@
  * builds a symbol table from the declarations it finds -- instead
  * of the hardcoded TEST_SYMBOLS[] array used by symtab_demo.c.
  *
- * Both structures from the prototype are built from those symbols:
- *   BASELINE  : textbook hash table w/ separate chaining, one
- *               malloc per node + one per name, unpacked fields.
- *   COMPRESSED: radix (Patricia) trie + flat arena arrays addressed
- *               by 16-bit indices + metadata bit-packed into one
- *               uint32_t (type 4b | scope 8b | storage 4b | offset 16b).
+ * All eight symbol-table structures are then built from those
+ * symbols -- the baseline (textbook hash table: malloc per node and
+ * per name, unpacked fields), every partial combination, and the
+ * full compressed table (radix trie + arena with 16-bit indices +
+ * metadata bit-packed into one uint32_t). They are the real
+ * implementations in variant_*.c, the same code run_sweep.sh measures.
  *
- * Every symbol is looked up in both structures before any number is
- * printed; if a round-trip fails the program reports an error instead
- * of reporting memory figures (a benchmark from unverified code does
+ * Every declaration is looked up in every structure before any number
+ * is printed; if a round-trip fails the program reports an error
+ * instead of memory figures (a benchmark from unverified code does
  * not count).
  *
  * Output is a single JSON object on stdout, consumed by backend/.
  * The input is never executed -- only parsed.
+ *
+ * Build (links the variants; their demo main()s drop out):
+ *   gcc -DSYMTAB_NO_MAIN symtab_analyze.c variant_*.c -o symtab_analyze
  *
  * Exit codes: 0 ok, 2 input rejected, 3 internal verification failure.
  * ------------------------------------------------------------
@@ -30,6 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+#include "symtab_common.h"
 
 #if defined(__has_feature)
 #  if __has_feature(address_sanitizer)
@@ -57,8 +62,7 @@
 #define MAX_TOKENS        200000u
 #define MAX_DECLS         8192u
 #define MAX_IDENT_LEN     255u         /* trie edge_len is uint8_t    */
-
-#define MALLOC_OVERHEAD   16           /* same estimate as the prototype */
+#define MAX_SCOPE_EXITS   (MAX_TOKENS / 2)   /* each needs a '{' and a '}' */
 
 /* Symbol attribute codes. Widths are what the bit-packing allows:
  * type 4 bits, scope 8 bits, storage_class 4 bits, offset 16 bits. */
@@ -91,6 +95,7 @@ static const char *STORAGE_NAMES[16] = {
 
 static void json_escape(const char *s, size_t len);
 static void release_all(void);
+static void record_use(size_t i, int at_stmt_start);
 
 /* Every exit path releases what it allocated, so LeakSanitizer stays quiet
  * on rejected input too -- not just on the success path. */
@@ -162,6 +167,63 @@ static size_t skip_quoted(size_t i, char quote) {
     return i;
 }
 
+/* Object-like integer macros (`#define BUF_LEN 16`), so `char buf[BUF_LEN];`
+ * gets its real size. The analyzer does not preprocess: anything more complex
+ * than "name, integer, optional comment" is ignored. */
+typedef struct {
+    char     name[64];
+    uint32_t value;
+} Macro;
+
+static Macro  macros[256];
+static size_t n_macros = 0;
+
+static size_t skip_blanks(size_t p, size_t end) {
+    while (p < end && (src[p] == ' ' || src[p] == '\t')) p++;
+    return p;
+}
+
+static void capture_define(size_t hash, size_t end) {
+    size_t p = skip_blanks(hash + 1, end);
+    if (end - p < 7 || memcmp(src + p, "define", 6) != 0 || (src[p + 6] != ' ' && src[p + 6] != '\t'))
+        return;
+
+    p = skip_blanks(p + 6, end);
+    size_t name_start = p;
+    while (p < end && is_id_char(src[p])) p++;
+    size_t name_len = p - name_start;
+    if (name_len == 0 || name_len >= sizeof(macros[0].name) || !is_id_start(src[name_start])) return;
+    if (p < end && src[p] == '(') return;                /* function-like macro */
+
+    p = skip_blanks(p, end);
+    char digits[32];
+    size_t n = 0;
+    while (p < end && is_id_char(src[p]) && n < sizeof(digits) - 1) digits[n++] = src[p++];
+    digits[n] = '\0';
+    if (n == 0 || !is_digit(digits[0])) return;
+
+    p = skip_blanks(p, end);                             /* only a comment may follow */
+    if (p < end && src[p] != '\r' && src[p] != '\n' &&
+        !(src[p] == '/' && p + 1 < end && (src[p + 1] == '/' || src[p + 1] == '*'))) return;
+
+    char *stop;
+    unsigned long value = strtoul(digits, &stop, 0);
+    while (*stop == 'u' || *stop == 'U' || *stop == 'l' || *stop == 'L') stop++;
+    if (*stop != '\0' || value > 0xFFFFFFFFul) return;
+
+    Macro *m = NULL;
+    for (size_t k = 0; k < n_macros && !m; k++)
+        if (strlen(macros[k].name) == name_len && memcmp(macros[k].name, src + name_start, name_len) == 0)
+            m = &macros[k];                              /* redefinition: last one wins */
+    if (!m) {
+        if (n_macros >= sizeof(macros) / sizeof(macros[0])) return;
+        m = &macros[n_macros++];
+        memcpy(m->name, src + name_start, name_len);
+        m->name[name_len] = '\0';
+    }
+    m->value = (uint32_t)value;
+}
+
 static void lex(void) {
     size_t i = 0;
     int at_line_start = 1;
@@ -172,7 +234,13 @@ static void lex(void) {
         if (c == '\n') { at_line_start = 1; i++; continue; }
         if (is_space(c)) { i++; continue; }
 
-        if (c == '#' && at_line_start) { i = skip_logical_line(i); at_line_start = 1; continue; }
+        if (c == '#' && at_line_start) {
+            size_t end = skip_logical_line(i);
+            capture_define(i, end);
+            i = end;
+            at_line_start = 1;
+            continue;
+        }
         at_line_start = 0;
 
         if (c == '/' && i + 1 < src_len && src[i + 1] == '/') { i = skip_logical_line(i); at_line_start = 1; continue; }
@@ -277,6 +345,7 @@ static size_t skip_initializer(size_t i) {
         } else if (depth == 0 && (tok_eq(i, ",") || tok_eq(i, ";"))) {
             return i;
         }
+        record_use(i, 0);
         i++;
     }
     return i;
@@ -366,6 +435,21 @@ typedef struct {
 static Decl   decls[MAX_DECLS];
 static size_t ndecl = 0;
 
+/* Scope depth whose closing '}' releases each declaration. Usually its own
+ * scope; struct members live as long as the struct, so they take the depth
+ * where their outermost struct was declared. */
+static uint8_t decl_release[MAX_DECLS];
+
+/* Every '}' that closes a scope, in source order, with how many
+ * declarations existed at that point -- enough to replay scope lifetimes. */
+typedef struct {
+    uint32_t decls_before;
+    uint8_t  depth;          /* depth of the scope being closed */
+} ScopeExit;
+
+static ScopeExit scope_exits[MAX_SCOPE_EXITS];
+static size_t    n_scope_exits = 0;
+
 static uint32_t data_offset = 0;   /* running offset in the data segment  */
 static uint32_t frame_offset = 0;  /* running offset in the current frame */
 
@@ -381,7 +465,41 @@ static void record_decl(size_t name_tok, uint8_t type, uint8_t scope,
     d->storage_class = storage_class;
     /* offset is a 16-bit field: past 64 KiB it saturates rather than wrapping */
     d->offset = offset > 0xFFFF ? 0xFFFF : (uint16_t)offset;
+    decl_release[ndecl - 1] = scope;
     if (storage_class != SC_TYPEDEF) obj_set_add(ndecl - 1);
+}
+
+static void record_scope_exit(int closing_depth) {
+    if (n_scope_exits >= MAX_SCOPE_EXITS) fail(2, "input has too many scopes");
+    scope_exits[n_scope_exits].decls_before = (uint32_t)ndecl;
+    scope_exits[n_scope_exits].depth = closing_depth > 255 ? 255 : (uint8_t)closing_depth;
+    n_scope_exits++;
+}
+
+/* Every identifier *use* (not a declaration), positioned among the
+ * declarations and scope exits so it can be resolved exactly where it
+ * appears: to the innermost declaration of that name still in scope. */
+typedef struct {
+    uint32_t tok;
+    uint32_t decls_before;
+    uint32_t exits_before;
+} UseEvent;
+
+static UseEvent uses[MAX_TOKENS];
+static size_t   n_uses = 0;
+
+static void record_use(size_t i, int at_stmt_start) {
+    if (!tok_is_ident(i) || tok_is_keyword(i)) return;
+    if (i > 0 && tok_eq(i - 1, ".")) return;                            /* s.member */
+    if (i > 1 && tok_eq(i - 1, ">") && tok_eq(i - 2, "-")) return;      /* p->member */
+    if (i > 0 && tok_eq(i - 1, "goto")) return;                         /* label */
+    if (at_stmt_start && tok_eq(i + 1, ":")) return;                    /* label: */
+    if (find_typedef(i)) return;                                        /* a type, not an object */
+    if (n_uses >= MAX_TOKENS) return;
+    uses[n_uses].tok = (uint32_t)i;
+    uses[n_uses].decls_before = (uint32_t)ndecl;
+    uses[n_uses].exits_before = (uint32_t)n_scope_exits;
+    n_uses++;
 }
 
 /* Set of names already declared as objects (not type names), so the check
@@ -414,6 +532,23 @@ static int declared_as_object(size_t i) {
         if (obj_slots[s] == 0) return 0;
         if (name_eq_tok(decls[obj_slots[s] - 1].name, i)) return 1;
     }
+    return 0;
+}
+
+/* Element count for `[ N ]` when N is a single integer literal or a captured
+ * #define; 0 (unknown) for anything else, e.g. `[N + 1]`. */
+static uint32_t array_length(size_t i) {
+    if (i + 1 >= ntok || !tok_eq(i + 1, "]")) return 0;
+    if (toks[i].kind == TK_NUM) {
+        char buf[32];
+        size_t n = toks[i].len < sizeof(buf) - 1 ? toks[i].len : sizeof(buf) - 1;
+        memcpy(buf, src + toks[i].pos, n);
+        buf[n] = '\0';
+        return (uint32_t)strtoul(buf, NULL, 0);
+    }
+    if (tok_is_ident(i))
+        for (size_t k = 0; k < n_macros; k++)
+            if (name_eq_tok(macros[k].name, i)) return macros[k].value;
     return 0;
 }
 
@@ -475,6 +610,7 @@ static size_t parse_tag_specifier(size_t i, DeclCtx ctx, TypeSpec *ts) {
         } else {
             i++;                                /* past '{' */
             uint32_t body_size = 0;
+            size_t first_member = ndecl;
             DeclCtx mctx;
             mctx.depth = clamp_depth(ctx.depth + 1);
             mctx.default_storage = SC_MEMBER;
@@ -493,7 +629,9 @@ static size_t parse_tag_specifier(size_t i, DeclCtx ctx, TypeSpec *ts) {
                 }
             }
             if (tok_eq(i, "}")) i++;
-            ts->size = align_up(body_size, 8) == body_size ? body_size : align_up(body_size, 8);
+            /* Members (nested ones included) live as long as this struct does. */
+            for (size_t k = first_member; k < ndecl; k++) decl_release[k] = ctx.depth;
+            ts->size = align_up(body_size, 8);
             if (ts->size == 0) ts->size = 1;
             if (have_tag) add_tag(tag_tok, ts->size);
         }
@@ -676,14 +814,7 @@ static size_t parse_declaration(size_t i, DeclCtx ctx) {
         if (!is_func_ptr) {
             while (i < ntok && toks[i].kind != TK_EOF) {
                 if (tok_eq(i, "[")) {
-                    uint32_t count = 0;
-                    if (i + 1 < ntok && toks[i + 1].kind == TK_NUM) {
-                        char buf[32];
-                        size_t n = toks[i + 1].len < sizeof(buf) - 1 ? toks[i + 1].len : sizeof(buf) - 1;
-                        memcpy(buf, src + toks[i + 1].pos, n);
-                        buf[n] = '\0';
-                        count = (uint32_t)strtoul(buf, NULL, 0);
-                    }
+                    uint32_t count = array_length(i + 1);
                     i = skip_group(i, "[", "]");
                     type = T_ARRAY;
                     if (count && size && count < 0x10000000u / (size ? size : 1)) size *= count;
@@ -773,7 +904,15 @@ static void parse_translation_unit(void) {
 
     while (i < ntok && toks[i].kind != TK_EOF) {
         if (tok_eq(i, "{")) { depth++; i++; stmt_start = 1; continue; }
-        if (tok_eq(i, "}")) { if (depth > 0) depth--; i++; stmt_start = 1; continue; }
+        if (tok_eq(i, "}")) {
+            if (depth > 0) {
+                record_scope_exit(depth);
+                depth--;
+            }
+            i++;
+            stmt_start = 1;
+            continue;
+        }
         if (tok_eq(i, ";")) { i++; stmt_start = 1; continue; }
 
         if (stmt_start && tok_eq(i, "for") && tok_eq(i + 1, "(")) {
@@ -805,354 +944,286 @@ static void parse_translation_unit(void) {
             if (next != (size_t)-1 && next > i) { i = next; stmt_start = 1; continue; }
         }
 
+        record_use(i, stmt_start);
         stmt_start = 0;
         i++;
     }
 }
 
 /* ============================================================
- * BASELINE: hash table with separate chaining (textbook layout)
+ * The eight structures
+ *
+ * Three techniques, each on or off -- bit-packed metadata (A), arena with
+ * 16-bit indices (B), radix trie (C) -- give eight structures. Every one is
+ * a real implementation from the variant_*.c files (the same code that
+ * run_sweep.sh measures for results.csv), built from this program's
+ * declarations, verified, measured, and torn down.
  * ============================================================ */
 
-typedef struct HNode {
-    char         *name;
-    struct HNode *next;
-    int type;
-    int scope;
-    int storage_class;
-    int offset;
-} HNode;
+typedef struct {
+    const char *key;          /* JSON key */
+    const Impl *impl;
+} Variant;
 
-#define HASH_BUCKETS 64
-static HNode *baseline_buckets[HASH_BUCKETS];
-static size_t baseline_bytes = 0;
+static const Variant VARIANTS[] = {
+    { "baseline",      &BASELINE_IMPL },   /* hash + malloc + unpacked */
+    { "bitpack_only",  &a_impl },
+    { "arena_only",    &b_impl },
+    { "trie_only",     &c_impl },
+    { "arena_bitpack", &ab_impl },
+    { "trie_bitpack",  &ac_impl },
+    { "trie_arena",    &bc_impl },
+    { "compressed",    &abc_impl },        /* all three */
+};
+#define NUM_VARIANTS (sizeof(VARIANTS) / sizeof(VARIANTS[0]))
+#define V_BASELINE   0
+#define V_COMPRESSED (NUM_VARIANTS - 1)
 
-static unsigned hash_str(const char *s) {
-    unsigned h = 5381;
-    while (*s) h = ((h << 5) + h) + (unsigned char)(*s++);
-    return h % HASH_BUCKETS;
-}
-
-static void *counting_malloc(size_t n) {
-    void *p = malloc(n);
-    if (!p) fail(2, "out of memory building baseline table");
-    baseline_bytes += n + MALLOC_OVERHEAD;
-    return p;
-}
-
-static void baseline_insert(const Decl *d) {
-    HNode *n = counting_malloc(sizeof(HNode));
-    n->name = counting_malloc(strlen(d->name) + 1);
-    strcpy(n->name, d->name);
-    n->type = d->type;
-    n->scope = d->scope;
-    n->storage_class = d->storage_class;
-    n->offset = d->offset;
-    unsigned b = hash_str(d->name);
-    n->next = baseline_buckets[b];
-    baseline_buckets[b] = n;
-}
-
-static int baseline_contains(const Decl *d) {
-    for (HNode *n = baseline_buckets[hash_str(d->name)]; n; n = n->next)
-        if (strcmp(n->name, d->name) == 0 && n->type == d->type && n->scope == d->scope &&
-            n->storage_class == d->storage_class && n->offset == d->offset)
-            return 1;
-    return 0;
-}
-
-static int baseline_has_name(const char *name) {
-    for (HNode *n = baseline_buckets[hash_str(name)]; n; n = n->next)
-        if (strcmp(n->name, name) == 0) return 1;
-    return 0;
-}
-
-static void baseline_free(void) {
-    for (int b = 0; b < HASH_BUCKETS; b++) {
-        HNode *n = baseline_buckets[b];
-        while (n) { HNode *next = n->next; free(n->name); free(n); n = next; }
-        baseline_buckets[b] = NULL;
-    }
-}
+static TestSymbol        symbols[MAX_DECLS];    /* decls[] in the variants' record form */
+static const TestSymbol *all_symbols[MAX_DECLS];
+static const Impl       *building = NULL;       /* structure currently holding memory   */
 
 static void release_all(void) {
-    baseline_free();
+    if (building) {
+        building->destroy();
+        building = NULL;
+    }
     free(src);
     src = NULL;
     src_len = 0;
 }
 
+/* Build one structure from syms[0..n), verify that every declaration is
+ * found and that an absent name is not, and return its size. Leaves nothing
+ * allocated. A benchmark from unverified code does not count. */
+static size_t measure(const Impl *impl, const TestSymbol *const *syms, size_t n) {
+    char msg[200];
+
+    building = impl;
+    impl->init();
+    for (size_t i = 0; i < n; i++) {
+        if (impl->insert(syms[i]) != 0) {
+            snprintf(msg, sizeof msg, "too many symbols for the 16-bit arena limits of %s", impl->label);
+            fail(2, msg);
+        }
+    }
+    for (size_t i = 0; i < n; i++) {
+        if (!impl->verify(syms[i])) {
+            snprintf(msg, sizeof msg, "lookup mismatch on '%.40s' in %s", syms[i]->name, impl->label);
+            fail(3, msg);
+        }
+    }
+    if (!impl->absent("__symtab_absent__")) {
+        snprintf(msg, sizeof msg, "false-positive lookup in %s", impl->label);
+        fail(3, msg);
+    }
+
+    size_t total = impl->total_bytes();
+    impl->destroy();
+    building = NULL;
+    return total;
+}
+
 /* ============================================================
- * COMPRESSED: radix trie + arena + bit-packed metadata
+ * Peak memory if scopes released their symbols
+ *
+ * The contract's figures keep every declaration (the whole program's
+ * table). A compiler can drop a block's symbols when the block closes, so
+ * the engine also reports the peak: the largest table needed at any point,
+ * found by replaying the parse's scope exits. At each point the structure
+ * is rebuilt from the live symbols -- the compact size it would have if it
+ * released perfectly.
+ *
+ * The live set only grows between scope exits, so the peak is at one of
+ * those local maxima. Inputs with many blocks are evaluated at the
+ * PEAK_SNAPSHOTS largest ones.
  * ============================================================ */
 
-#define MAX_NODES  60000u
-#define MAX_CHARS  60000u
-#define MAX_SYMS   MAX_DECLS
-#define NIL        0xFFFF
-#define ROOT       0
+#define PEAK_SNAPSHOTS 32
+#define MAX_CANDIDATES (MAX_SCOPE_EXITS + 1)
 
 typedef struct {
-    uint16_t first_child;
-    uint16_t next_sibling;
-    uint16_t edge_offset;
-    uint8_t  edge_len;
-    uint8_t  is_leaf;
-    uint16_t symbol_id;
-} TrieNode;
+    size_t baseline;
+    size_t compressed;
+    size_t live;
+} Peak;
 
-static TrieNode      node_pool[MAX_NODES];
-static uint16_t      node_count = 0;
-static unsigned char char_pool[MAX_CHARS];
-static uint16_t      char_used = 0;
-static uint32_t      meta_pool[MAX_SYMS];
-static uint16_t      meta_count = 0;
-static uint16_t      edge_stores = 0;   /* how many separate edge strings exist */
+static uint16_t           live_stack[MAX_DECLS];
+static const TestSymbol  *live_symbols[MAX_DECLS];
+static uint16_t           candidate_live[MAX_CANDIDATES];
+static uint8_t            candidate_picked[MAX_CANDIDATES];
 
-/* A name declared twice (shadowed in an inner scope, or re-declared) needs a
- * second metadata word. The leaf points at the newest; older ones hang off
- * this side table, so the common case -- unique names -- costs nothing. */
-typedef struct { uint16_t newer; uint16_t older; } ShadowLink;
-static ShadowLink shadow_links[MAX_SYMS];
-static uint16_t   shadow_count = 0;
+static void measure_live(size_t top, Peak *peak) {
+    for (size_t i = 0; i < top; i++) live_symbols[i] = &symbols[live_stack[i]];
 
-static uint16_t new_node(void) {
-    if (node_count >= MAX_NODES) fail(2, "input exceeds the trie node arena");
-    uint16_t id = node_count++;
-    node_pool[id].first_child = NIL;
-    node_pool[id].next_sibling = NIL;
-    node_pool[id].is_leaf = 0;
-    node_pool[id].symbol_id = NIL;
-    return id;
+    size_t b = measure(VARIANTS[V_BASELINE].impl, live_symbols, top);
+    size_t c = measure(VARIANTS[V_COMPRESSED].impl, live_symbols, top);
+    if (b > peak->baseline) peak->baseline = b;
+    if (c > peak->compressed) peak->compressed = c;
+    if (top > peak->live) peak->live = top;
 }
 
-/* Static arrays start zeroed, and 0 is a valid node index (root's own), not
- * the NIL sentinel -- without this the root points at itself and the sibling
- * walk never terminates. */
-static void trie_init(void) {
-    node_pool[ROOT].first_child = NIL;
-    node_pool[ROOT].next_sibling = NIL;
-    node_pool[ROOT].is_leaf = 0;
-    node_pool[ROOT].symbol_id = NIL;
-    node_count = 1;
-}
+/* Walk declarations and scope exits in source order. Every point where the
+ * live set has grown since the last one is a candidate; records its size,
+ * and measures it when `picked` selects it. Returns the candidate count. */
+static size_t replay_scopes(const uint8_t *picked, Peak *peak) {
+    size_t top = 0, next_decl = 0, candidates = 0;
+    int grew = 0;
 
-static uint16_t pool_store(const char *chars, uint8_t len) {
-    if ((uint32_t)char_used + len > MAX_CHARS) fail(2, "input exceeds the character arena");
-    uint16_t off = char_used;
-    memcpy(&char_pool[off], chars, len);
-    char_used = (uint16_t)(char_used + len);
-    edge_stores++;
-    return off;
-}
+    for (size_t e = 0; e <= n_scope_exits; e++) {
+        int at_end = (e == n_scope_exits);
+        size_t upto = at_end ? ndecl : scope_exits[e].decls_before;
 
-static uint32_t pack_meta(uint8_t type, uint8_t scope, uint8_t storage_class, uint16_t offset) {
-    /* 4 bits type | 8 bits scope | 4 bits storage_class | 16 bits offset */
-    return ((uint32_t)(type & 0xF) << 28)
-         | ((uint32_t)scope << 20)
-         | ((uint32_t)(storage_class & 0xF) << 16)
-         | (uint32_t)offset;
-}
-
-static void unpack_meta(uint32_t m, uint8_t *type, uint8_t *scope,
-                        uint8_t *storage_class, uint16_t *offset) {
-    *type          = (m >> 28) & 0xF;
-    *scope         = (m >> 20) & 0xFF;
-    *storage_class = (m >> 16) & 0xF;
-    *offset        = m & 0xFFFF;
-}
-
-static uint16_t store_metadata(uint32_t packed) {
-    if (meta_count >= MAX_SYMS) fail(2, "input exceeds the metadata arena");
-    meta_pool[meta_count] = packed;
-    return meta_count++;
-}
-
-static uint16_t *find_child_slot(uint16_t parent, char c) {
-    uint16_t *slot = &node_pool[parent].first_child;
-    while (*slot != NIL && char_pool[node_pool[*slot].edge_offset] != (unsigned char)c)
-        slot = &node_pool[*slot].next_sibling;
-    return slot;
-}
-
-/* Insert key and return the node that terminates it, splitting edges as
- * needed. Metadata is attached by the caller. */
-static uint16_t trie_insert_node(const char *key) {
-    size_t len = strlen(key);
-    uint16_t cur = ROOT;
-    size_t pos = 0;
-
-    while (pos < len) {
-        uint16_t *slot = find_child_slot(cur, key[pos]);
-
-        if (*slot == NIL) {
-            uint16_t leaf = new_node();
-            node_pool[leaf].edge_offset = pool_store(key + pos, (uint8_t)(len - pos));
-            node_pool[leaf].edge_len = (uint8_t)(len - pos);
-            *slot = leaf;
-            return leaf;
+        while (next_decl < upto) {
+            live_stack[top++] = (uint16_t)next_decl++;
+            grew = 1;
         }
-
-        uint16_t child = *slot;
-        uint16_t e_off = node_pool[child].edge_offset;
-        uint8_t  e_len = node_pool[child].edge_len;
-
-        size_t cp = 0;
-        while (cp < e_len && pos + cp < len && char_pool[e_off + cp] == (unsigned char)key[pos + cp]) cp++;
-
-        if (cp == e_len) {
-            pos += cp;
-            cur = child;
-            if (pos == len) return cur;
-            continue;
+        if (grew || (at_end && candidates == 0)) {
+            candidate_live[candidates] = (uint16_t)top;
+            if (picked && picked[candidates]) measure_live(top, peak);
+            candidates++;
+            grew = 0;
         }
-
-        /* Partial match: split this edge at cp. */
-        uint16_t mid = new_node();
-        node_pool[mid].edge_offset = e_off;
-        node_pool[mid].edge_len = (uint8_t)cp;
-        node_pool[mid].next_sibling = node_pool[child].next_sibling;
-
-        node_pool[child].edge_offset = (uint16_t)(e_off + cp);
-        node_pool[child].edge_len = (uint8_t)(e_len - cp);
-        node_pool[child].next_sibling = NIL;
-        node_pool[mid].first_child = child;
-
-        *slot = mid;   /* mid takes child's place in the parent's sibling list */
-
-        size_t remaining = len - (pos + cp);
-        if (remaining == 0) return mid;
-
-        uint16_t leaf = new_node();
-        node_pool[leaf].edge_offset = pool_store(key + pos + cp, (uint8_t)remaining);
-        node_pool[leaf].edge_len = (uint8_t)remaining;
-        node_pool[child].next_sibling = leaf;
-        return leaf;
+        if (!at_end) {
+            uint8_t closing = scope_exits[e].depth;
+            while (top > 0 && decl_release[live_stack[top - 1]] >= closing) top--;
+        }
     }
-    return ROOT;   /* empty key */
+    return candidates;
 }
 
-static uint16_t trie_lookup(const char *key) {
-    size_t len = strlen(key);
-    uint16_t cur = ROOT;
-    size_t pos = 0;
+static void compute_peak(Peak *peak) {
+    peak->baseline = peak->compressed = peak->live = 0;
 
-    while (pos < len) {
-        uint16_t *slot = find_child_slot(cur, key[pos]);
-        if (*slot == NIL) return NIL;
-        uint16_t child = *slot;
-        uint16_t e_off = node_pool[child].edge_offset;
-        uint8_t  e_len = node_pool[child].edge_len;
-        if (e_len > len - pos) return NIL;
-        if (memcmp(&char_pool[e_off], key + pos, e_len) != 0) return NIL;
-        pos += e_len;
-        cur = child;
+    size_t candidates = replay_scopes(NULL, NULL);
+    memset(candidate_picked, 0, candidates);
+    for (size_t round = 0; round < PEAK_SNAPSHOTS && round < candidates; round++) {
+        size_t best = candidates;
+        for (size_t k = 0; k < candidates; k++)
+            if (!candidate_picked[k] && (best == candidates || candidate_live[k] > candidate_live[best]))
+                best = k;
+        candidate_picked[best] = 1;
     }
-    if (!node_pool[cur].is_leaf) return NIL;
-    return node_pool[cur].symbol_id;
+    replay_scopes(candidate_picked, peak);
 }
 
-static void trie_add_symbol(const Decl *d) {
-    uint16_t leaf = trie_insert_node(d->name);
-    uint16_t id = store_metadata(pack_meta(d->type, d->scope, d->storage_class, d->offset));
-    if (node_pool[leaf].is_leaf && node_pool[leaf].symbol_id != NIL) {
-        if (shadow_count >= MAX_SYMS) fail(2, "too many shadowed declarations");
-        shadow_links[shadow_count].newer = id;
-        shadow_links[shadow_count].older = node_pool[leaf].symbol_id;
-        shadow_count++;
-    }
-    node_pool[leaf].is_leaf = 1;
-    node_pool[leaf].symbol_id = id;
-}
+/* ============================================================
+ * Scoped lookup: resolving every identifier use
+ *
+ * What a symbol table is for. The compressed (ABC) table is rebuilt in
+ * source order while scopes open and close; each use resolves to the newest
+ * declaration of its name whose scope is still open, walking the trie's
+ * declaration chain (abc_declarations). Struct members are a separate
+ * namespace in C and never resolve a bare name.
+ *
+ * Every resolution is checked against an independent reference resolver --
+ * per-name "previous declaration" links found by hashing, no trie -- so each
+ * request doubles as a differential test of the compressed table's lookup.
+ * ============================================================ */
 
-/* Links are appended as metadata ids grow, so `newer` is sorted: binary
- * search keeps chain walks off a quadratic path on shadow-heavy input. */
-static uint16_t shadow_older(uint16_t newer) {
-    uint16_t lo = 0, hi = shadow_count;
-    while (lo < hi) {
-        uint16_t mid = (uint16_t)(lo + (hi - lo) / 2);
-        if (shadow_links[mid].newer == newer) return shadow_links[mid].older;
-        if (shadow_links[mid].newer < newer) lo = (uint16_t)(mid + 1);
-        else hi = mid;
+#define KEY_SLOTS 16384u
+
+static uint32_t references[MAX_DECLS];
+static uint8_t  in_scope[MAX_DECLS];
+static uint16_t open_decls[MAX_DECLS];   /* declarations whose scope is open */
+static uint16_t name_key[MAX_DECLS];     /* first declaration with the same name */
+static uint16_t prev_same[MAX_DECLS];    /* previous declaration of the same name, NIL */
+static uint16_t newest_by_key[MAX_DECLS];
+static uint16_t key_slots[KEY_SLOTS];    /* first-declaration index + 1; 0 = empty */
+static uint16_t chain[MAX_DECLS];
+static size_t   n_resolved = 0;
+
+static uint16_t key_lookup(const char *s, size_t len) {
+    uint32_t slot = name_hash(s, len) % KEY_SLOTS;
+    for (uint32_t probe = 0; probe < KEY_SLOTS; probe++) {
+        uint32_t k = (slot + probe) % KEY_SLOTS;
+        if (key_slots[k] == 0) return NIL;
+        const char *name = decls[key_slots[k] - 1].name;
+        if (strlen(name) == len && memcmp(name, s, len) == 0) return (uint16_t)(key_slots[k] - 1);
     }
     return NIL;
 }
 
-/* Walk a name's metadata chain (newest first) looking for this declaration.
- * Compares unpacked fields, so this also proves the pack/unpack round-trip. */
-static int trie_contains(const Decl *d) {
-    uint16_t id = trie_lookup(d->name);
-    int guard = 0;
-    while (id != NIL && guard++ <= (int)meta_count) {
-        uint8_t type, scope, storage_class;
-        uint16_t offset;
-        unpack_meta(meta_pool[id], &type, &scope, &storage_class, &offset);
-        if (type == d->type && scope == d->scope &&
-            storage_class == d->storage_class && offset == d->offset) return 1;
-        id = shadow_older(id);
+static void build_name_keys(void) {
+    for (size_t i = 0; i < ndecl; i++) {
+        size_t len = strlen(decls[i].name);
+        uint16_t key = key_lookup(decls[i].name, len);
+        if (key == NIL) {
+            uint32_t slot = name_hash(decls[i].name, len) % KEY_SLOTS;
+            while (key_slots[slot]) slot = (slot + 1) % KEY_SLOTS;
+            key_slots[slot] = (uint16_t)(i + 1);
+            key = (uint16_t)i;
+        }
+        name_key[i] = key;
     }
-    return 0;
 }
 
-/* ============================================================
- * Memory accounting, including the ablation variants
- *
- * Three techniques, each independently on or off:
- *   storage : hash table  vs  radix trie
- *   alloc   : malloc + pointers  vs  flat arena + 16-bit indices
- *   metadata: four ints  vs  one bit-packed uint32
- *
- * The structures' *shape* (symbol count, name bytes, trie node and edge
- * counts) is measured from the real build above; only the per-record
- * layout changes between variants, and each layout below is a real struct
- * so the compiler -- not a hand calculation -- decides its size.
- * ============================================================ */
-
-typedef struct HNodeP  { char *name; struct HNodeP *next; uint32_t meta; } HNodeP;
-typedef struct { uint16_t name_off; uint16_t next; int type, scope, storage_class, offset; } HNodeArenaU;
-typedef struct { uint16_t name_off; uint16_t next; uint32_t meta; } HNodeArenaP;
-typedef struct { int type, scope, storage_class, offset; } MetaUnpacked;
-typedef struct TrieU { struct TrieU *first_child, *next_sibling; char *edge;
-                       uint8_t edge_len, is_leaf; MetaUnpacked *meta; } TrieNodePtrU;
-typedef struct TrieB { struct TrieB *first_child, *next_sibling; char *edge;
-                       uint8_t edge_len, is_leaf; uint32_t meta; } TrieNodePtrP;
-
-typedef struct {
-    size_t n_syms;       /* declarations recorded                        */
-    size_t name_bytes;   /* sum of strlen(name)+1 over declarations      */
-    size_t nodes;        /* trie nodes actually used                     */
-    size_t edge_bytes;   /* characters held in the trie's edge storage   */
-    size_t edge_allocs;  /* separately allocated edge strings            */
-    size_t shadows;      /* redeclarations needing a chain link          */
-} Shape;
-
-static size_t hash_malloc_bytes(const Shape *s, size_t node_size, size_t meta_extra) {
-    return HASH_BUCKETS * sizeof(void *)
-         + s->n_syms * (node_size + MALLOC_OVERHEAD)
-         + s->name_bytes + s->n_syms * MALLOC_OVERHEAD
-         + meta_extra;
+static int resolvable(uint16_t d) {
+    return in_scope[d] && decls[d].storage_class != SC_MEMBER;
 }
 
-static size_t hash_arena_bytes(const Shape *s, size_t node_size) {
-    return HASH_BUCKETS * sizeof(uint16_t)
-         + s->n_syms * node_size
-         + s->name_bytes;
-}
+static void resolve_uses(void) {
+    size_t inserted = 0, exits_done = 0, open = 0;
+    char name[MAX_IDENT_LEN + 1];
 
-static size_t trie_malloc_bytes(const Shape *s, size_t node_size, int meta_separate) {
-    size_t total = s->nodes * (node_size + MALLOC_OVERHEAD)
-                 + s->edge_bytes + s->edge_allocs * MALLOC_OVERHEAD;
-    if (meta_separate)
-        total += s->n_syms * (sizeof(MetaUnpacked) + MALLOC_OVERHEAD);
-    total += s->shadows * (sizeof(void *) + MALLOC_OVERHEAD);
-    return total;
-}
+    build_name_keys();
+    for (size_t i = 0; i < ndecl; i++) newest_by_key[i] = NIL;
 
-static size_t trie_arena_bytes(const Shape *s, size_t meta_size) {
-    return s->nodes * sizeof(TrieNode)
-         + s->edge_bytes
-         + s->n_syms * meta_size
-         + s->shadows * sizeof(ShadowLink);
+    building = &abc_impl;
+    abc_impl.init();
+
+    for (size_t u = 0; u < n_uses; u++) {
+        /* Bring the table to the state at this use: declarations and scope
+         * exits interleaved exactly as they occurred. */
+        for (;;) {
+            size_t upto = exits_done < uses[u].exits_before
+                        ? scope_exits[exits_done].decls_before : uses[u].decls_before;
+            while (inserted < upto) {
+                if (abc_impl.insert(&symbols[inserted]) != 0)
+                    fail(2, "too many symbols for the 16-bit arena limits");
+                in_scope[inserted] = 1;
+                prev_same[inserted] = newest_by_key[name_key[inserted]];
+                newest_by_key[name_key[inserted]] = (uint16_t)inserted;
+                open_decls[open++] = (uint16_t)inserted;
+                inserted++;
+            }
+            if (exits_done >= uses[u].exits_before) break;
+            uint8_t closing = scope_exits[exits_done].depth;
+            while (open > 0 && decl_release[open_decls[open - 1]] >= closing)
+                in_scope[open_decls[--open]] = 0;
+            exits_done++;
+        }
+
+        const Token *t = &toks[uses[u].tok];
+        memcpy(name, src + t->pos, t->len);
+        name[t->len] = '\0';
+
+        /* Compressed table: newest declaration still in scope. */
+        uint16_t via_trie = NIL;
+        size_t n = abc_declarations(name, chain, MAX_DECLS);
+        for (size_t k = 0; k < n && via_trie == NIL; k++)
+            if (resolvable(chain[k])) via_trie = chain[k];
+
+        /* Reference resolver. */
+        uint16_t via_reference = NIL;
+        uint16_t key = key_lookup(name, t->len);
+        for (uint16_t d = key == NIL ? NIL : newest_by_key[key]; d != NIL; d = prev_same[d])
+            if (resolvable(d)) { via_reference = d; break; }
+
+        if (via_trie != via_reference) {
+            char msg[MAX_IDENT_LEN + 96];
+            snprintf(msg, sizeof msg,
+                     "scoped lookup in the compressed table disagrees with the reference on '%.60s'", name);
+            fail(3, msg);
+        }
+        if (via_trie != NIL) {
+            references[via_trie]++;
+            n_resolved++;
+        }
+    }
+
+    abc_impl.destroy();
+    building = NULL;
 }
 
 /* ============================================================
@@ -1175,19 +1246,15 @@ static void json_escape(const char *s, size_t len) {
     }
 }
 
-static void print_json(const Shape *shape, size_t baseline_total, size_t compressed_total,
-                       const size_t ablation[6]) {
-    static const char *ABLATION_KEYS[6] = {
-        "trie_only", "arena_only", "bitpack_only",
-        "trie_arena", "trie_bitpack", "arena_bitpack"
-    };
+static double savings_pct(size_t baseline, size_t compressed) {
+    return baseline ? 100.0 * (1.0 - (double)compressed / (double)baseline) : 0.0;
+}
 
-    double savings = baseline_total
-        ? 100.0 * (1.0 - (double)compressed_total / (double)baseline_total)
-        : 0.0;
+static void print_json(const size_t totals[NUM_VARIANTS], const Peak *peak) {
+    size_t baseline = totals[V_BASELINE], compressed = totals[V_COMPRESSED];
 
     printf("{\"baseline_bytes\":%zu,\"compressed_bytes\":%zu,\"savings_pct\":%.2f,",
-           baseline_total, compressed_total, savings);
+           baseline, compressed, savings_pct(baseline, compressed));
 
     printf("\"symbol_table\":[");
     for (size_t i = 0; i < ndecl; i++) {
@@ -1195,21 +1262,24 @@ static void print_json(const Shape *shape, size_t baseline_total, size_t compres
         if (i) putchar(',');
         printf("{\"name\":\"");
         json_escape(d->name, strlen(d->name));
-        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u}",
+        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,\"references\":%u}",
                TYPE_NAMES[d->type & 0xF], (unsigned)d->scope,
-               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset);
+               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i]);
     }
     printf("],");
 
     printf("\"ablation\":{");
-    for (size_t i = 0; i < 6; i++)
-        printf("%s\"%s\":%zu", i ? "," : "", ABLATION_KEYS[i], ablation[i]);
+    for (size_t v = V_BASELINE + 1; v < V_COMPRESSED; v++)
+        printf("%s\"%s\":%zu", v > V_BASELINE + 1 ? "," : "", VARIANTS[v].key, totals[v]);
     printf("},");
 
-    printf("\"stats\":{\"symbols\":%zu,\"trie_nodes\":%zu,\"char_pool_bytes\":%zu,"
-           "\"name_bytes\":%zu,\"shadowed\":%zu,\"source_bytes\":%zu}}\n",
-           shape->n_syms, shape->nodes, shape->edge_bytes,
-           shape->name_bytes, shape->shadows, src_len);
+    printf("\"peak\":{\"baseline_bytes\":%zu,\"compressed_bytes\":%zu,\"savings_pct\":%.2f,"
+           "\"live_symbols\":%zu},",
+           peak->baseline, peak->compressed, savings_pct(peak->baseline, peak->compressed), peak->live);
+
+    printf("\"stats\":{\"symbols\":%zu,\"scope_exits\":%zu,\"uses\":%zu,\"resolved\":%zu,"
+           "\"source_bytes\":%zu}}\n",
+           ndecl, n_scope_exits, n_uses, n_resolved, src_len);
 }
 
 /* ============================================================
@@ -1264,53 +1334,24 @@ int main(void) {
     lex();
     parse_translation_unit();
 
-    trie_init();
     for (size_t i = 0; i < ndecl; i++) {
-        baseline_insert(&decls[i]);
-        trie_add_symbol(&decls[i]);
+        symbols[i].name = decls[i].name;
+        symbols[i].type = decls[i].type;
+        symbols[i].scope = decls[i].scope;
+        symbols[i].storage_class = decls[i].storage_class;
+        symbols[i].offset = decls[i].offset;
+        all_symbols[i] = &symbols[i];
     }
 
-    /* Verify before measuring: every declaration must round-trip through both
-     * structures, and neither may invent a symbol that was never inserted. */
-    for (size_t i = 0; i < ndecl; i++) {
-        if (!baseline_contains(&decls[i])) fail(3, "baseline lookup mismatch");
-        if (!trie_contains(&decls[i]))     fail(3, "trie lookup mismatch");
-    }
-    if (baseline_has_name("__symtab_absent__")) fail(3, "baseline false positive");
-    if (trie_lookup("__symtab_absent__") != NIL) fail(3, "trie false positive");
+    size_t totals[NUM_VARIANTS];
+    for (size_t v = 0; v < NUM_VARIANTS; v++)
+        totals[v] = measure(VARIANTS[v].impl, all_symbols, ndecl);
 
-    Shape shape;
-    shape.n_syms = ndecl;
-    shape.name_bytes = 0;
-    for (size_t i = 0; i < ndecl; i++) shape.name_bytes += strlen(decls[i].name) + 1;
-    shape.nodes = node_count;
-    shape.edge_bytes = char_used;
-    shape.edge_allocs = edge_stores;
-    shape.shadows = shadow_count;
+    Peak peak;
+    compute_peak(&peak);
+    resolve_uses();
 
-    size_t baseline_total = baseline_bytes + sizeof(baseline_buckets);
-    size_t compressed_total = (size_t)node_count * sizeof(TrieNode)
-                            + (size_t)char_used
-                            + (size_t)meta_count * sizeof(uint32_t)
-                            + (size_t)shadow_count * sizeof(ShadowLink);
-
-    /* Cross-check the accounting model against the structure actually built:
-     * the all-three variant must equal what the real build measured. */
-    if (trie_arena_bytes(&shape, sizeof(uint32_t)) != compressed_total)
-        fail(3, "compressed accounting disagrees with the built structure");
-    if (hash_malloc_bytes(&shape, sizeof(HNode), 0) != baseline_total)
-        fail(3, "baseline accounting disagrees with the built structure");
-
-    size_t ablation[6];
-    ablation[0] = trie_malloc_bytes(&shape, sizeof(TrieNodePtrU), 1);   /* trie_only     */
-    ablation[1] = hash_arena_bytes(&shape, sizeof(HNodeArenaU));        /* arena_only    */
-    ablation[2] = hash_malloc_bytes(&shape, sizeof(HNodeP), 0);         /* bitpack_only  */
-    ablation[3] = trie_arena_bytes(&shape, sizeof(MetaUnpacked));       /* trie_arena    */
-    ablation[4] = trie_malloc_bytes(&shape, sizeof(TrieNodePtrP), 0);   /* trie_bitpack  */
-    ablation[5] = hash_arena_bytes(&shape, sizeof(HNodeArenaP));        /* arena_bitpack */
-
-    print_json(&shape, baseline_total, compressed_total, ablation);
-
+    print_json(totals, &peak);
     release_all();
     return 0;
 }

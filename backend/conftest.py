@@ -17,15 +17,22 @@ import pytest
 
 BACKEND_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BACKEND_DIR.parent
-ENGINE_SOURCE = REPO_ROOT / "engine" / "symtab_analyze.c"
+ENGINE_DIR = REPO_ROOT / "engine"
+ENGINE_SOURCE = ENGINE_DIR / "symtab_analyze.c"
 
 SANITIZER_FLAGS = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
-BASE_FLAGS = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-g"]
+# Same strictness as the CI engine job; SYMTAB_NO_MAIN drops the variants' demo main()s.
+BASE_FLAGS = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-pedantic", "-g", "-DSYMTAB_NO_MAIN"]
+
+
+def engine_sources() -> list[str]:
+    """The analyzer plus every variant it links (the real ablation structures)."""
+    return [str(ENGINE_SOURCE), *sorted(str(p) for p in ENGINE_DIR.glob("variant_*.c"))]
 
 
 def _compile(binary: Path, flags: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["gcc", str(ENGINE_SOURCE), "-o", str(binary), *BASE_FLAGS, *flags],
+        ["gcc", *engine_sources(), "-o", str(binary), *BASE_FLAGS, *flags],
         capture_output=True,
         text=True,
         check=False,

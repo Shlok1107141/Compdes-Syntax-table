@@ -9,15 +9,14 @@
  * meta_pool holds packed uint32_t words instead of 16 B unpacked structs.
  * That makes ABC - BC a clean measurement of bit-packing on top of trie+arena.
  *
- * Accounting: bytes USED in the three arenas (same convention as B / AB / BC).
+ * Redeclaration: the node points at the newest metadata word; each older one
+ * is remembered by a 4 B ArenaShadow record. Unique names never use one.
+ *
+ * Accounting: bytes USED in the arenas (same convention as B / AB / BC).
  */
 #include "symtab_common.h"
 
-#define NIL        0xFFFF
-#define ROOT       0
-#define MAX_NODES  2048
-#define MAX_CHARS  8192
-#define MAX_SYMS   512
+#define ROOT 0
 
 typedef struct {
     uint16_t first_child;
@@ -28,26 +27,16 @@ typedef struct {
     uint16_t symbol_id;      /* index into meta_pool when is_leaf */
 } TrieNode;
 
-static TrieNode node_pool[MAX_NODES];
-static uint16_t node_count;
-static char     char_pool[MAX_CHARS];
-static uint16_t char_used;
-static uint32_t meta_pool[MAX_SYMS];   /* 4b type | 8b scope | 4b storage | 16b off */
-static uint16_t meta_count;
-
-static uint32_t pack_meta(uint8_t type, uint8_t scope, uint8_t sc, uint16_t off) {
-    return ((uint32_t)(type & 0xF) << 28) | ((uint32_t)scope << 20)
-         | ((uint32_t)(sc & 0xF) << 16)   | (uint32_t)off;
-}
-static void unpack_meta(uint32_t m, uint8_t *type, uint8_t *scope, uint8_t *sc, uint16_t *off) {
-    *type = (uint8_t)((m >> 28) & 0xF);
-    *scope = (uint8_t)((m >> 20) & 0xFF);
-    *sc = (uint8_t)((m >> 16) & 0xF);
-    *off = (uint16_t)(m & 0xFFFF);
-}
+static TrieNode    node_pool[ARENA_MAX_ITEMS];
+static uint16_t    node_count;
+static char        char_pool[ARENA_MAX_CHARS];
+static uint16_t    char_used;
+static uint32_t    meta_pool[ARENA_MAX_ITEMS];  /* 4b type | 8b scope | 4b storage | 16b off */
+static uint16_t    meta_count;
+static ArenaShadow shadow_pool[ARENA_MAX_ITEMS];
+static uint16_t    shadow_count;
 
 static uint16_t new_node(void) {
-    if (node_count >= MAX_NODES) { fprintf(stderr, "node arena full\n"); exit(1); }
     uint16_t id = node_count++;
     node_pool[id].first_child = NIL;
     node_pool[id].next_sibling = NIL;
@@ -59,22 +48,21 @@ static uint16_t new_node(void) {
 }
 
 static uint16_t pool_store(const char *chars, size_t len) {
-    if ((size_t)char_used + len > MAX_CHARS) { fprintf(stderr, "char arena full\n"); exit(1); }
     uint16_t off = char_used;
     memcpy(&char_pool[off], chars, len);
     char_used = (uint16_t)(char_used + len);
     return off;
 }
 
-static uint16_t store_meta(const TestSymbol *s) {
-    if (meta_count >= MAX_SYMS) { fprintf(stderr, "meta arena full\n"); exit(1); }
-    meta_pool[meta_count] = pack_meta(s->type, s->scope, s->storage_class, s->offset);
-    return meta_count++;
-}
-
-static void make_terminal(uint16_t node, const TestSymbol *s) {
+static void add_declaration(uint16_t node, const TestSymbol *s) {
+    if (node_pool[node].is_leaf) {
+        shadow_pool[shadow_count].node = node;
+        shadow_pool[shadow_count].older = node_pool[node].symbol_id;
+        shadow_count++;
+    }
+    meta_pool[meta_count] = pack_symbol(s);
     node_pool[node].is_leaf = 1;
-    node_pool[node].symbol_id = store_meta(s);
+    node_pool[node].symbol_id = meta_count++;
 }
 
 static uint16_t *find_child_slot(uint16_t parent, char c) {
@@ -88,13 +76,19 @@ static void abc_init(void) {
     node_count = 0;
     char_used = 0;
     meta_count = 0;
+    shadow_count = 0;
     (void)new_node();            /* index 0 = ROOT; fields set to NIL, not 0 */
 }
 
-static void abc_insert(const TestSymbol *s) {
+static int abc_insert(const TestSymbol *s) {
     const char *key = s->name;
     size_t len = strlen(key), pos = 0;
     uint16_t cur = ROOT;
+
+    /* Worst case for one insert: two nodes, every character, one metadata
+     * word, one shadow record. Refuse up front rather than half-insert. */
+    if ((size_t)node_count + 2 > ARENA_MAX_ITEMS || (size_t)char_used + len > ARENA_MAX_CHARS ||
+        meta_count >= ARENA_MAX_ITEMS || shadow_count >= ARENA_MAX_ITEMS) return -1;
 
     while (pos < len) {
         uint16_t *slot = find_child_slot(cur, key[pos]);
@@ -103,9 +97,9 @@ static void abc_insert(const TestSymbol *s) {
             uint16_t leaf = new_node();
             node_pool[leaf].edge_offset = pool_store(key + pos, len - pos);
             node_pool[leaf].edge_len = (uint8_t)(len - pos);
-            make_terminal(leaf, s);
+            add_declaration(leaf, s);
             *slot = leaf;
-            return;
+            return 0;
         }
 
         uint16_t child = *slot;
@@ -119,8 +113,8 @@ static void abc_insert(const TestSymbol *s) {
             pos += cp;
             cur = child;
             if (pos == len) {
-                if (!node_pool[cur].is_leaf) make_terminal(cur, s);
-                return;
+                add_declaration(cur, s);
+                return 0;
             }
             continue;
         }
@@ -139,18 +133,20 @@ static void abc_insert(const TestSymbol *s) {
 
         size_t remaining = len - (pos + cp);
         if (remaining == 0) {
-            make_terminal(mid, s);
+            add_declaration(mid, s);
         } else {
             uint16_t leaf = new_node();
             node_pool[leaf].edge_offset = pool_store(key + pos + cp, remaining);
             node_pool[leaf].edge_len = (uint8_t)remaining;
-            make_terminal(leaf, s);
+            add_declaration(leaf, s);
             node_pool[child].next_sibling = leaf;
         }
-        return;
+        return 0;
     }
+    return 0;
 }
 
+/* Node that terminates key, or NIL. */
 static uint16_t abc_find(const char *key) {
     size_t len = strlen(key), pos = 0;
     uint16_t cur = ROOT;
@@ -164,42 +160,56 @@ static uint16_t abc_find(const char *key) {
         pos += e_len;
         cur = child;
     }
-    return node_pool[cur].is_leaf ? node_pool[cur].symbol_id : NIL;
+    return node_pool[cur].is_leaf ? cur : NIL;
 }
 
 static int abc_verify(const TestSymbol *s) {
-    uint16_t id = abc_find(s->name);
-    if (id == NIL) return 0;
-    uint8_t t, sc, stc;
-    uint16_t off;
-    unpack_meta(meta_pool[id], &t, &sc, &stc, &off);
-    return t == s->type && sc == s->scope && stc == s->storage_class && off == s->offset;
+    uint16_t node = abc_find(s->name);
+    if (node == NIL) return 0;
+    if (packed_matches(meta_pool[node_pool[node].symbol_id], s)) return 1;
+    for (uint16_t i = 0; i < shadow_count; i++)
+        if (shadow_pool[i].node == node && packed_matches(meta_pool[shadow_pool[i].older], s)) return 1;
+    return 0;
 }
 static int abc_absent(const char *k) { return abc_find(k) == NIL; }
+
+/* Every declaration of `name`, newest first, as metadata indices -- which are
+ * insertion order, since each insert stores exactly one word. This is what a
+ * compiler walks to resolve a use: the first one whose scope is still open. */
+size_t abc_declarations(const char *name, uint16_t *out, size_t max) {
+    uint16_t node = abc_find(name);
+    size_t n = 0;
+    if (node == NIL || max == 0) return 0;
+    out[n++] = node_pool[node].symbol_id;
+    for (size_t i = shadow_count; i > 0 && n < max; i--)
+        if (shadow_pool[i - 1].node == node) out[n++] = shadow_pool[i - 1].older;
+    return n;
+}
 
 static size_t abc_total(void) {
     return (size_t)node_count * sizeof(TrieNode)
          + (size_t)char_used
-         + (size_t)meta_count * sizeof(uint32_t);
-}
-static size_t full_name_bytes(void) {
-    size_t t = 0;
-    for (size_t i = 0; i < NUM_SYMBOLS; i++) t += strlen(TEST_SYMBOLS[i].name) + 1;
-    return t;
+         + (size_t)meta_count * sizeof(uint32_t)
+         + (size_t)shadow_count * sizeof(ArenaShadow);
 }
 static void abc_breakdown(void) {
     printf("    sizeof(TrieNode)     : %zu B\n", sizeof(TrieNode));
     printf("    trie nodes           : %u x %zu = %zu B (incl. root)\n", (unsigned)node_count,
            sizeof(TrieNode), (size_t)node_count * sizeof(TrieNode));
     printf("    char pool            : %u B  (vs %zu B of full names in baseline)\n",
-           (unsigned)char_used, full_name_bytes());
+           (unsigned)char_used, test_name_bytes());
     printf("    meta pool            : %u x 4 = %zu B (packed)\n", (unsigned)meta_count,
            (size_t)meta_count * sizeof(uint32_t));
     printf("    allocator overhead   : 0 B (no malloc)\n");
 }
 
+static void abc_destroy(void) { abc_init(); }   /* static arenas: nothing to free */
+
+const Impl abc_impl = { "VARIANT ABC (radix trie + arena/16-bit indices + bit-packed meta)",
+                        abc_init, abc_insert, abc_verify, abc_absent, abc_total, abc_breakdown, abc_destroy };
+
+#ifndef SYMTAB_NO_MAIN
 int main(void) {
-    static const Impl v = { "VARIANT ABC (radix trie + arena/16-bit indices + bit-packed meta)",
-                            abc_init, abc_insert, abc_verify, abc_absent, abc_total, abc_breakdown };
-    return run_experiment("Variant ABC: all three techniques", &v);
+    return run_experiment("Variant ABC: all three techniques", &abc_impl);
 }
+#endif
