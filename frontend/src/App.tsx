@@ -53,7 +53,11 @@ export function App() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error during analysis.';
         setError(msg);
-        if (targetMode === 'live') {
+        // Only a failed connection means the engine is down; a 400/413/429 is the
+        // engine (or its guards) working as intended.
+        const unreachable =
+          msg.includes('Could not connect') || msg.includes('timed out') || msg.includes('HTTP 503');
+        if (targetMode === 'live' && unreachable) {
           setIsBackendAvailable(false);
         }
       } finally {
