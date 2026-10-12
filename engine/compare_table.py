@@ -27,10 +27,11 @@ CONFIG_NAMES = {
     "BC": "trie + arena",
     "ABC": "all three",
 }
-PATTERN_ORDER = ["realistic", "random"]
+PATTERN_ORDER = ["realistic", "random", "scoped"]
 PATTERN_TITLES = {
     "realistic": "Realistic subsystem naming",
     "random": "Random worst-case naming",
+    "scoped": "Scoped program (functions redeclare common locals)",
 }
 
 

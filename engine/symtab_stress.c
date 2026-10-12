@@ -60,7 +60,7 @@ int main(void) {
 #define st_variant      ST_PASTE(CFG, _impl)   /* e.g. ab_impl, exported by the variant */
 
 /* ---------------- deterministic RNG (splitmix64) ---------------- */
-#define ST_MAX_N     300
+#define ST_MAX_N     1000
 #define ST_NAME_LEN  32
 
 typedef struct { uint64_t s; } StRng;
@@ -174,6 +174,56 @@ static void st_gen_random(StRng *r, size_t n, TestSymbol *syms, char names[][ST_
     }
 }
 
+/* ---------------- pattern 3: scoped program ----------------
+ * The shape of real C: file-scope names in <subsystem>_<field> style (40%),
+ * then functions, each declaring 2..8 locals drawn from a small recurring
+ * pool (i, tmp, len, ...). Every function that uses `i` declares it again,
+ * so this is the one pattern with redeclarations: every structure must keep
+ * each declaration, and a trie stores the repeated name only once. */
+static const char *const ST_LOCALS[] = {
+    "i", "j", "k", "n", "tmp", "ret", "len", "count", "buf", "ptr", "idx",
+    "value", "err", "result", "status", "data"
+};
+
+static void st_gen_scoped(StRng *r, size_t n, TestSymbol *syms, char names[][ST_NAME_LEN]) {
+    size_t globals = n * 2 / 5, count = globals;
+    unsigned fn = 0;
+
+    st_gen_realistic(r, globals, syms, names);
+    for (size_t i = 0; i < globals; i++) {          /* file scope, global storage */
+        syms[i].scope = 0;
+        syms[i].storage_class = 1;
+    }
+
+    while (count < n) {
+        snprintf(names[count], ST_NAME_LEN, "%s_task%u",
+                 ST_SUBSYS[st_rand(r, (uint32_t)ST_COUNT(ST_SUBSYS))], fn++);
+        syms[count].name = names[count];
+        syms[count].type = 3;                       /* function */
+        syms[count].scope = 0;
+        syms[count].storage_class = 1;
+        syms[count].offset = 0;
+        count++;
+
+        size_t pool[ST_COUNT(ST_LOCALS)];
+        for (size_t i = 0; i < ST_COUNT(ST_LOCALS); i++) pool[i] = i;
+        size_t locals = 2 + st_rand(r, 7);          /* distinct within one function */
+        unsigned frame = 0;
+        for (size_t m = 0; m < locals && count < n; m++) {
+            size_t j = m + st_rand(r, (uint32_t)(ST_COUNT(ST_LOCALS) - m));
+            size_t t = pool[m]; pool[m] = pool[j]; pool[j] = t;
+            snprintf(names[count], ST_NAME_LEN, "%s", ST_LOCALS[pool[m]]);
+            syms[count].name = names[count];
+            syms[count].type = (uint8_t)st_rand(r, 4);
+            syms[count].scope = 1;
+            syms[count].storage_class = 0;          /* local */
+            syms[count].offset = (uint16_t)frame;
+            frame += 4;
+            count++;
+        }
+    }
+}
+
 /* ---------------- one (pattern, n) measurement ---------------- */
 static int st_in_set(const TestSymbol *syms, size_t n, const char *key) {
     for (size_t i = 0; i < n; i++)
@@ -188,8 +238,9 @@ static int st_run_one(int pattern, const char *pname, size_t n, uint64_t seed) {
     StRng r;
     r.s = seed * 1000003ULL + (uint64_t)pattern * 7919ULL + (uint64_t)n;
 
-    if (pattern == 0) st_gen_realistic(&r, n, syms, names);
-    else              st_gen_random(&r, n, syms, names);
+    if (pattern == 0)      st_gen_realistic(&r, n, syms, names);
+    else if (pattern == 1) st_gen_random(&r, n, syms, names);
+    else                   st_gen_scoped(&r, n, syms, names);
 
     int ok = 1;
     base->init();
@@ -235,12 +286,12 @@ static int st_run_one(int pattern, const char *pname, size_t n, uint64_t seed) {
 }
 
 int main(int argc, char **argv) {
-    static const size_t ns[] = { 10, 25, 50, 100, 200, 300 };
-    static const char *const patterns[] = { "realistic", "random" };
+    static const size_t ns[] = { 10, 25, 50, 100, 200, 300, 500, 1000 };
+    static const char *const patterns[] = { "realistic", "random", "scoped" };
     uint64_t seed = 1;
     if (argc > 1) seed = strtoull(argv[1], NULL, 10);
 
-    for (int p = 0; p < 2; p++)
+    for (int p = 0; p < 3; p++)
         for (size_t k = 0; k < sizeof ns / sizeof ns[0]; k++)
             if (st_run_one(p, patterns[p], ns[k], seed)) return 1;
     return 0;
