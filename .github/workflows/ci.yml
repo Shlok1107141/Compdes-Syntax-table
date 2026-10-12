@@ -153,6 +153,10 @@ jobs:
                -d '{"code":"int counter; int counter_max; void f(void) { int i; i = counter; }"}' \
             | tee /dev/stderr | grep -q '"compressed_bytes"'
 
+      - name: Adversarial end-to-end suite against the containers
+        if: hashFiles('backend/scripts/adversarial_e2e.py') != ''
+        run: python3 backend/scripts/adversarial_e2e.py http://localhost:8080/api
+
       - name: Show logs on failure
         if: failure() && hashFiles('docker-compose.yml') != ''
         run: docker compose logs
