@@ -37,10 +37,10 @@ Click any link below to filter issues directly on GitHub:
 
 | Issue # | Member | Domain | Milestone | Title | Priority | Status |
 | :---: | :--- | :--- | :---: | :--- | :---: | :---: |
-| [#6](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/6) | `@Shlok1107141` | `domain:engine` | `day-1` | Implement C Lexer & Tokenizer for Source Input | `P0-critical` | **OPEN (Ready)** |
-| [#7](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/7) | `@Shlok1107141` | `domain:engine` | `day-1` | Implement Lexical Scope Tracker & Declaration Resolver | `P0-critical` | **OPEN (Ready)** |
-| [#8](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/8) | `@Shlok1107141` | `domain:engine` | `day-2` | Connect Lexer & Scope Tracker to Compressed Engine Core | `P0-critical` | **OPEN (Blocked)** |
-| [#9](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/9) | `@Shlok1107141` | `domain:backend` | `day-1` | Build FastAPI Subprocess Wrapper & Sandboxed `/analyze` Endpoint | `P0-critical` | **OPEN (Ready)** |
+| [#6](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/6) | `@Shlok1107141` | `domain:engine` | `day-1` | Implement C Lexer & Tokenizer for Source Input | `P0-critical` | **CLOSED (PR #32)** |
+| [#7](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/7) | `@Shlok1107141` | `domain:engine` | `day-1` | Implement Lexical Scope Tracker & Declaration Resolver | `P0-critical` | **CLOSED (PR #32)** |
+| [#8](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/8) | `@Shlok1107141` | `domain:engine` | `day-2` | Connect Lexer & Scope Tracker to Compressed Engine Core | `P0-critical` | **CLOSED (PR #32)** |
+| [#9](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/9) | `@Shlok1107141` | `domain:backend` | `day-1` | Build FastAPI Subprocess Wrapper & Sandboxed `/analyze` Endpoint | `P0-critical` | **CLOSED (PR #32)** |
 | [#18](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/18) | `@armoredglock` | `domain:frontend` | `day-1` | Scaffold React+Vite Webapp & Configure CI/CD Pipeline | `P0-critical` | **CLOSED (PR #5)** |
 | [#19](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/19) | `@armoredglock` | `domain:frontend` | `day-1` | Build Monospace Code Input Panel & Preset Selector | `P0-critical` | **CLOSED (PR #5)** |
 | [#20](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/20) | `@armoredglock` | `domain:frontend` | `day-1` | Build Live Metrics Dashboard & 7-Configuration Ablation Chart | `P0-critical` | **CLOSED (PR #5)** |
@@ -48,9 +48,9 @@ Click any link below to filter issues directly on GitHub:
 | [#22](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/22) | `@armoredglock` | `domain:frontend` | `day-2` | Build Interactive Radix (Patricia) Trie Visualizer (Showcase Demo) | `P0-critical` | **CLOSED (PR #5)** |
 | [#23](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/23) | `@armoredglock` | `domain:frontend` | `day-2` | Implement Dual Mode (Simulated Mock vs Live API) & Failure State UX | `P0-critical` | **CLOSED (PR #5)** |
 | [#10](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/10) | `@armoredglock` | `domain:frontend` | `day-2` | Live Backend Integration & Error State Hardening | `P1-high` | **CLOSED (PR #30)** |
-| [#11](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/11) | `@hardikpardik` | `domain:ablation` | `day-1` | Implement 3 Isolated Single-Technique Engine Variants | `P0-critical` | **OPEN (Ready)** |
-| [#12](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/12) | `@hardikpardik` | `domain:ablation` | `day-2` | Implement 3 Pairwise Combination Engine Variants | `P0-critical` | **OPEN (Blocked)** |
-| [#13](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/13) | `@hardikpardik` | `domain:ablation` | `day-3` | Multi-Configuration Stress Sweep & Final Comparison Table | `P0-critical` | **OPEN (Blocked)** |
+| [#11](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/11) | `@hardikpardik` | `domain:ablation` | `day-1` | Implement 3 Isolated Single-Technique Engine Variants | `P0-critical` | **CLOSED (PR #27)** |
+| [#12](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/12) | `@hardikpardik` | `domain:ablation` | `day-2` | Implement 3 Pairwise Combination Engine Variants | `P0-critical` | **CLOSED (PR #28)** |
+| [#13](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/13) | `@hardikpardik` | `domain:ablation` | `day-3` | Multi-Configuration Stress Sweep & Final Comparison Table | `P0-critical` | **CLOSED (PR #29)** |
 | [#14](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/14) | `@Eben923` | `domain:research-paper` | `day-1` | Research Paper Draft - Problem, Architecture & Methodology | `P1-high` | **OPEN (Ready)** |
 | [#15](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/15) | `@Eben923` | `domain:research-paper` | `day-2` | Research Paper Results & Discussion Synthesis | `P0-critical` | **OPEN (Blocked)** |
 | [#16](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/16) | `@Eben923` | `domain:testing` | `day-3` | Adversarial End-to-End Test Suite Execution | `P0-critical` | **OPEN (Blocked)** |
