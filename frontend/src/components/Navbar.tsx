@@ -46,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
               title={
                 isBackendAvailable
                   ? 'Connected to FastAPI backend with C engine ready'
-                  : 'Backend server not responding at http://localhost:8000'
+                  : 'Backend not responding (start it with docker compose up)'
               }
             >
               <span
@@ -62,16 +62,16 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
           <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
             <button
               type="button"
-              onClick={() => onToggleMode('mock')}
+              onClick={() => onToggleMode('offline')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
-                mode === 'mock'
+                mode === 'offline'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Runs instant client-side simulation based on engine/symtab_demo.c"
+              title="No backend needed: the C engine's precomputed results for the built-in samples"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Simulated Mode</span>
+              <span>Offline Samples</span>
             </button>
             <button
               type="button"
@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Connects to FastAPI backend at http://localhost:8000/analyze"
+              title="Runs the C engine on the code in the editor via POST /analyze"
             >
               <Radio className="w-3.5 h-3.5" />
               <span>Live Backend</span>

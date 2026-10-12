@@ -1,38 +1,40 @@
 import React from 'react';
-import { AlertCircle, AlertTriangle, X, ArrowRight, ShieldAlert, Clock, Ban } from 'lucide-react';
+import { AlertCircle, AlertTriangle, X, ArrowRight, ShieldAlert, Clock, Ban, WifiOff } from 'lucide-react';
 import type { ExecutionMode } from '../types';
+import { OFFLINE_UNAVAILABLE } from '../services/api';
 
 interface ErrorBannerProps {
   error: string | null;
   onDismiss: () => void;
   mode: ExecutionMode;
-  onSwitchToMock?: () => void;
+  onSwitchToOffline?: () => void;
 }
 
 export const ErrorBanner: React.FC<ErrorBannerProps> = ({
   error,
   onDismiss,
   mode,
-  onSwitchToMock,
+  onSwitchToOffline,
 }) => {
   if (!error) return null;
 
+  const isOfflineLimit = error === OFFLINE_UNAVAILABLE;
   const isNetworkError =
     error.includes('Could not connect') ||
-    error.includes('Failed to fetch') ||
-    error.includes('NetworkError') ||
-    error.includes('ECONNREFUSED') ||
-    error.includes('timed out');
-
-  const isRateLimit = error.includes('HTTP 429') || error.includes('Rate Limit');
-  const isPayloadTooLarge = error.includes('HTTP 413') || error.includes('Payload Too Large');
-  const isParseError = error.includes('HTTP 400') || error.includes('Parse Error');
+    error.includes('timed out') ||
+    error.includes('HTTP 503');
+  const isRateLimit = error.includes('HTTP 429');
+  const isPayloadTooLarge = error.includes('HTTP 413');
+  const isParseError = error.includes('HTTP 400') || error.includes('HTTP 422');
 
   let title = 'Analysis Error';
   let badgeColor = 'border-rose-500/30 bg-rose-950/40 text-rose-200 shadow-rose-950/20';
 
-  if (isNetworkError) {
-    title = 'FastAPI Backend Disconnected';
+  if (isOfflineLimit) {
+    title = 'Offline Mode: Built-in Samples Only';
+    badgeColor = 'border-indigo-500/30 bg-indigo-950/40 text-indigo-200 shadow-indigo-950/20';
+  } else if (isNetworkError) {
+    title = 'Backend Unavailable';
     badgeColor = 'border-amber-500/30 bg-amber-950/40 text-amber-200 shadow-amber-950/20';
   } else if (isRateLimit) {
     title = 'Security Notice: Rate Limit Exceeded';
@@ -41,14 +43,16 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
     title = 'Security Limit: Payload Exceeds 64 KB';
     badgeColor = 'border-rose-500/30 bg-rose-950/40 text-rose-200 shadow-rose-950/20';
   } else if (isParseError) {
-    title = 'C Semantic Lexer Notice';
+    title = 'Input Rejected by the Analyzer';
     badgeColor = 'border-blue-500/30 bg-blue-950/40 text-blue-200 shadow-blue-950/20';
   }
 
   return (
     <div className={`mb-6 rounded-xl border p-4 backdrop-blur-sm flex items-start justify-between shadow-lg ${badgeColor}`}>
       <div className="flex items-start space-x-3">
-        {isNetworkError ? (
+        {isOfflineLimit ? (
+          <WifiOff className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+        ) : isNetworkError ? (
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
         ) : isRateLimit ? (
           <Clock className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
@@ -64,18 +68,18 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({
           <h4 className="text-sm font-semibold tracking-tight">{title}</h4>
           <p className="text-xs sm:text-sm mt-1 opacity-90 leading-relaxed font-mono">{error}</p>
 
-          {isNetworkError && mode === 'live' && onSwitchToMock && (
+          {isNetworkError && mode === 'live' && onSwitchToOffline && (
             <div className="mt-3 flex items-center space-x-3">
               <button
                 type="button"
-                onClick={onSwitchToMock}
+                onClick={onSwitchToOffline}
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
               >
-                <span>Switch to Simulated Mode (Preview Offline)</span>
+                <span>Browse the offline samples instead</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <span className="text-xs text-slate-400 font-sans">
-                (or start backend: <code className="bg-slate-900 px-1 py-0.5 rounded text-slate-300">cd backend && uvicorn main:app --port 8000</code>)
+                (or start the backend: <code className="bg-slate-900 px-1 py-0.5 rounded text-slate-300">docker compose up</code>)
               </span>
             </div>
           )}
