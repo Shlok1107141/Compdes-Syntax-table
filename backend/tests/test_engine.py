@@ -257,6 +257,24 @@ def test_struct_members_live_as_long_as_their_struct(run_engine):
     assert payload["peak"]["live_symbols"] == 5
 
 
+def test_compiler_extensions_are_not_symbols(run_engine):
+    """Preprocessed system headers are full of GNU/MSVC annotations; they name nothing."""
+    source = """
+    extern int printf(const char *__restrict__ fmt, ...) __attribute__((__format__(printf, 1, 2)));
+    __extension__ typedef long long big_t;
+    static __inline__ int twice(int v) { return v * 2; }
+    __declspec(dllimport) void imported(void);
+    int counter __asm__("real_counter");
+    void spin(void) { __asm__ __volatile__ ("nop"); }
+    """
+    code, payload, _ = run_engine(source)
+    assert code == 0, payload
+    names = [s["name"] for s in payload["symbol_table"]]
+    assert not [n for n in names if n.startswith("__")], names
+    for expected in ("printf", "big_t", "twice", "imported", "counter", "spin"):
+        assert expected in names
+
+
 def test_savings_percentage_matches_the_byte_counts(run_engine):
     _, payload, _ = run_engine(SAMPLE_SOURCE)
     expected = 100.0 * (1 - payload["compressed_bytes"] / payload["baseline_bytes"])
