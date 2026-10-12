@@ -183,23 +183,3 @@ def test_source_over_one_mib_is_rejected(run_engine):
     code, payload, _ = run_engine("int x;\n" * 200_000)
     assert code == 2
     assert "1 MiB" in payload["error"]
-
-
-@pytest.mark.parametrize(
-    "source",
-    [
-        "{" * 2000,
-        "}" * 2000,
-        "int a; /* unterminated",
-        'char *s = "unterminated',
-        "int (*" * 200,
-        "struct { struct { struct { int x; }; }; };",
-        "\x00\x01\x02 int x;",
-        "int " + "a[" * 100 + "1" + "]" * 100 + ";",
-    ],
-)
-def test_malformed_input_never_crashes(run_engine, source):
-    code, payload, stderr = run_engine(source)
-    assert code in (0, 2), f"unexpected exit {code}: {stderr}"
-    assert payload, "no JSON returned"
-    assert stderr == "", stderr

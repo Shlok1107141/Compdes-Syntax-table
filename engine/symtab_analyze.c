@@ -90,11 +90,15 @@ static const char *STORAGE_NAMES[16] = {
  * ============================================================ */
 
 static void json_escape(const char *s, size_t len);
+static void release_all(void);
 
+/* Every exit path releases what it allocated, so LeakSanitizer stays quiet
+ * on rejected input too -- not just on the success path. */
 static void fail(int code, const char *msg) {
     printf("{\"error\":\"");
     json_escape(msg, strlen(msg));
     printf("\"}\n");
+    release_all();
     exit(code);
 }
 
@@ -871,6 +875,13 @@ static void baseline_free(void) {
     }
 }
 
+static void release_all(void) {
+    baseline_free();
+    free(src);
+    src = NULL;
+    src_len = 0;
+}
+
 /* ============================================================
  * COMPRESSED: radix trie + arena + bit-packed metadata
  * ============================================================ */
@@ -1262,11 +1273,11 @@ int main(void) {
     /* Verify before measuring: every declaration must round-trip through both
      * structures, and neither may invent a symbol that was never inserted. */
     for (size_t i = 0; i < ndecl; i++) {
-        if (!baseline_contains(&decls[i])) { baseline_free(); fail(3, "baseline lookup mismatch"); }
-        if (!trie_contains(&decls[i]))     { baseline_free(); fail(3, "trie lookup mismatch"); }
+        if (!baseline_contains(&decls[i])) fail(3, "baseline lookup mismatch");
+        if (!trie_contains(&decls[i]))     fail(3, "trie lookup mismatch");
     }
-    if (baseline_has_name("__symtab_absent__")) { baseline_free(); fail(3, "baseline false positive"); }
-    if (trie_lookup("__symtab_absent__") != NIL) { baseline_free(); fail(3, "trie false positive"); }
+    if (baseline_has_name("__symtab_absent__")) fail(3, "baseline false positive");
+    if (trie_lookup("__symtab_absent__") != NIL) fail(3, "trie false positive");
 
     Shape shape;
     shape.n_syms = ndecl;
@@ -1285,14 +1296,10 @@ int main(void) {
 
     /* Cross-check the accounting model against the structure actually built:
      * the all-three variant must equal what the real build measured. */
-    if (trie_arena_bytes(&shape, sizeof(uint32_t)) != compressed_total) {
-        baseline_free();
+    if (trie_arena_bytes(&shape, sizeof(uint32_t)) != compressed_total)
         fail(3, "compressed accounting disagrees with the built structure");
-    }
-    if (hash_malloc_bytes(&shape, sizeof(HNode), 0) != baseline_total) {
-        baseline_free();
+    if (hash_malloc_bytes(&shape, sizeof(HNode), 0) != baseline_total)
         fail(3, "baseline accounting disagrees with the built structure");
-    }
 
     size_t ablation[6];
     ablation[0] = trie_malloc_bytes(&shape, sizeof(TrieNodePtrU), 1);   /* trie_only     */
@@ -1304,7 +1311,6 @@ int main(void) {
 
     print_json(&shape, baseline_total, compressed_total, ablation);
 
-    baseline_free();
-    free(src);
+    release_all();
     return 0;
 }
