@@ -75,12 +75,26 @@ class Ablation(BaseModel):
     arena_bitpack: int
 
 
+class Peak(BaseModel):
+    """Largest table needed at any point if each scope released its symbols on exit.
+
+    Additive to the locked contract: the whole-program figures above keep
+    every declaration; this is what a compiler that frees block scopes needs.
+    """
+
+    baseline_bytes: int
+    compressed_bytes: int
+    savings_pct: float
+    live_symbols: int
+
+
 class AnalyzeResponse(BaseModel):
     baseline_bytes: int
     compressed_bytes: int
     savings_pct: float
     symbol_table: list[Symbol]
     ablation: Ablation
+    peak: Peak
 
 
 # --------------------------------------------------------------------------
@@ -161,12 +175,13 @@ async def analyze(payload: AnalyzeRequest, request: Request) -> AnalyzeResponse:
         except EngineError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
 
-    # Return exactly the locked contract; the engine's extra diagnostics
-    # ("stats") stay server-side.
+    # Return the locked contract plus the additive `peak`; the engine's extra
+    # diagnostics ("stats") stay server-side.
     return AnalyzeResponse(
         baseline_bytes=result["baseline_bytes"],
         compressed_bytes=result["compressed_bytes"],
         savings_pct=result["savings_pct"],
         symbol_table=result["symbol_table"],
         ablation=result["ablation"],
+        peak=result["peak"],
     )

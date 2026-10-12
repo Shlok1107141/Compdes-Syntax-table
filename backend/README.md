@@ -17,9 +17,16 @@ Response: {
   "symbol_table": [ { "name": str, "type": str, "scope": int,
                       "storage_class": str, "offset": int }, ... ],
   "ablation": { "trie_only": int, "arena_only": int, "bitpack_only": int,
-                "trie_arena": int, "trie_bitpack": int, "arena_bitpack": int }
+                "trie_arena": int, "trie_bitpack": int, "arena_bitpack": int },
+  "peak": { "baseline_bytes": int, "compressed_bytes": int,
+            "savings_pct": float, "live_symbols": int }
 }
 ```
+
+`peak` is **additive** — every locked field above it is unchanged. The
+whole-program figures keep every declaration; `peak` is the largest table needed
+at any single point if each scope released its symbols when it closed (what a
+compiler that frees block scopes would need).
 
 A real response is checked in at [`examples/analyze_response.json`](examples/analyze_response.json)
 — use it as the frontend stub; it is generated from the engine, not hand-written.
@@ -46,15 +53,16 @@ Errors are `{"detail": "..."}` with these statuses:
 ## Running it
 
 ```bash
-gcc engine/symtab_analyze.c -o engine/symtab_analyze -std=c11 -Wall -Wextra -O2
+make -C engine symtab_analyze        # links the analyzer with every variant_*.c
 pip install -r backend/requirements.txt
 cd backend && uvicorn main:app --reload --port 8000
 ```
 
 Then `curl -X POST localhost:8000/analyze -H 'Content-Type: application/json' -d '{"code":"int counter; int counter_max;"}'`.
 
-On Windows the engine binary is `engine\symtab_analyze.exe`; set `SYMTAB_ENGINE`
-to point somewhere else.
+Without `make` (e.g. plain MinGW on Windows):
+`gcc -std=c11 -O2 -DSYMTAB_NO_MAIN engine/symtab_analyze.c engine/variant_*.c -o engine/symtab_analyze.exe`.
+Set `SYMTAB_ENGINE` to use a binary somewhere else.
 
 ### Configuration
 
@@ -73,7 +81,7 @@ to point somewhere else.
 cd backend && pytest
 ```
 
-`conftest.py` compiles the engine with `-fsanitize=address,undefined -Werror`
+`conftest.py` compiles the engine with `-fsanitize=address,undefined -Werror -pedantic`
 for the test session, so every engine test is also a memory-safety check. On
 Windows (MinGW, no sanitizer runtime) it falls back to a plain build; CI runs on
 Linux and always takes the sanitized path.
@@ -92,27 +100,41 @@ untrusted source text reaching a native parser:
 - Concurrency bounded (4 analyzer processes), so a burst cannot fork-bomb the host.
 - Rate limited per client; CORS locked to an explicit origin allow-list.
 - Every arena bound in the engine is checked; overflow is a JSON error, not a crash.
-  105 hostile inputs (random bytes, unbalanced braces, unterminated literals,
-  pathological nesting) produce JSON and exit cleanly.
+  108 hostile inputs ([`tests/hostile_inputs.py`](tests/hostile_inputs.py): random
+  bytes, unbalanced braces, unterminated literals, pathological nesting) produce
+  JSON and exit cleanly under ASan, UBSan and LeakSanitizer.
 
 Deployment still needs to run the process as an unprivileged user in a
 container — that part belongs in the writeup, not in this code.
 
 ## How the ablation numbers are produced
 
-Three independent techniques — trie storage, arena allocation with 16-bit
-indices, bit-packed metadata — give eight combinations. The engine builds the
-baseline and the all-three structure **for real** and measures them. The six
-partial combinations are computed from the same measured shape (symbol count,
-name bytes, trie node and edge counts), with each variant's per-record layout
-declared as a real C struct so `sizeof` — not arithmetic in a comment — decides
-its size. The engine asserts its own accounting reproduces both structures it
-actually built, and refuses to print numbers otherwise.
+Three independent techniques — bit-packed metadata (A), arena allocation with
+16-bit indices (B), radix trie (C) — give eight structures. For every request
+the engine **builds all eight for real** from the parsed declarations, checks
+that each one finds every declaration (and does not find an absent name), then
+measures it. They are the implementations in `engine/variant_*.c` — the same code
+`engine/run_sweep.sh` measures for `results.csv` — so the UI and the paper share
+one source of truth.
 
-**This is accounting, not a second implementation.** Hardik's ablation harness
-builds the variants for real across the stress sweep; these per-request numbers
-exist so the UI can show a breakdown. If the two disagree, his numbers are the
-ones that belong in the paper.
+| JSON key | Variant | Techniques |
+|---|---|---|
+| `baseline_bytes` | baseline | none |
+| `bitpack_only` | A | bit-packing |
+| `arena_only` | B | arena |
+| `trie_only` | C | trie |
+| `arena_bitpack` | AB | arena + bit-packing |
+| `trie_bitpack` | AC | trie + bit-packing |
+| `trie_arena` | BC | trie + arena |
+| `compressed_bytes` | ABC | all three |
+
+`test_numbers_match_the_standalone_variant_demos` pins this: for the
+prototype's 30 identifiers the analyzer must print exactly the totals the
+variant demos print.
+
+A name declared more than once (shadowing) is stored once in a trie; each
+extra declaration adds its metadata plus a shadow record (4 B in the arena
+tries). Unique-name workloads — everything in `results.csv` — never pay for it.
 
 ## What the parser covers
 

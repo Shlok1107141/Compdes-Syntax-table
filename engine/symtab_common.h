@@ -1,12 +1,17 @@
 /*
  * symtab_common.h
- * Shared by all three isolated variants:
- *   - test data (same identifier set as the original prototype)
- *   - allocation tracker (same accounting model as original: n + MALLOC_OVERHEAD)
+ * Shared by every symbol-table variant and by the programs that drive them:
+ *   - the symbol record and the Impl interface each variant implements
+ *   - allocation tracker (same accounting model as the original: n + MALLOC_OVERHEAD)
+ *   - the limits that 16-bit arena indices impose
+ *   - metadata packing helpers (4b type | 8b scope | 4b storage | 16b offset)
  *   - BASELINE implementation (textbook chained hash table, unpacked ints)
- *   - experiment harness that runs baseline vs. ONE variant and reports
+ *   - test data + experiment harness used by each variant's demo main()
  *
- * Header-only with static functions: each variant .c file is a single TU.
+ * Header-only with static functions: each variant is a single .c file. Every
+ * variant also exports `const Impl <cfg>_impl`, so a program can either link
+ * several variants together (symtab_analyze) or #include exactly one with
+ * SYMTAB_NO_MAIN defined (symtab_stress).
  */
 #ifndef SYMTAB_COMMON_H
 #define SYMTAB_COMMON_H
@@ -17,7 +22,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/* ---------- test data ---------- */
+/* ---------- symbol record ---------- */
 typedef struct {
     const char *name;
     uint8_t  type;           /* 4 bits needed  */
@@ -26,30 +31,72 @@ typedef struct {
     uint16_t offset;         /* 16 bits needed */
 } TestSymbol;
 
-static const TestSymbol TEST_SYMBOLS[] = {
-    {"counter",        0, 0, 1,   0}, {"counter_max",    0, 0, 1,   4},
-    {"counter_min",    0, 0, 1,   8}, {"counter_reset",  3, 1, 3,   0},
-    {"count",          0, 1, 0,   0}, {"count_all",      0, 1, 0,   4},
-    {"temp",           1, 0, 1,  12}, {"temp_max",       1, 0, 1,  13},
-    {"temp_min",       1, 0, 1,  14}, {"temp_buffer",    2, 0, 1,  16},
-    {"sensor_id",      0, 0, 1,  24}, {"sensor_value",   0, 0, 1,  28},
-    {"sensor_read",    3, 1, 3,   0}, {"sensor_write",   3, 1, 3,   0},
-    {"led_pin",        0, 0, 1,  32}, {"led_state",      0, 0, 1,  36},
-    {"led_toggle",     3, 1, 3,   0}, {"buffer",         2, 0, 1,  40},
-    {"buffer_size",    0, 0, 1,  44}, {"buffer_ptr",     2, 0, 1,  48},
-    {"status",         0, 0, 1,  52}, {"status_flag",    0, 0, 1,  56},
-    {"status_code",    0, 0, 1,  60}, {"init",           3, 1, 3,   0},
-    {"init_flag",      0, 2, 0,   0}, {"main",           3, 1, 3,   0},
-    {"handler",        3, 1, 3,   0}, {"handler_id",     0, 2, 0,   4},
-    {"config",         3, 0, 1,  64}, {"config_flag",    0, 0, 1,  68},
-};
-#define NUM_SYMBOLS (sizeof(TEST_SYMBOLS) / sizeof(TEST_SYMBOLS[0]))
+/* ---------- implementation interface ----------
+ * A name may be declared more than once (shadowed in an inner scope, or
+ * redeclared). Every declaration is stored, and verify() must find each one,
+ * not only the newest. */
+typedef struct {
+    const char *label;
+    void   (*init)(void);
+    int    (*insert)(const TestSymbol *s);   /* 0 = stored, -1 = an arena is full */
+    int    (*verify)(const TestSymbol *s);   /* 1 = this exact declaration is found */
+    int    (*absent)(const char *key);       /* 1 = correctly not found             */
+    size_t (*total_bytes)(void);
+    void   (*breakdown)(void);
+    void   (*destroy)(void);                 /* release everything init/insert took */
+} Impl;
+
+extern const Impl a_impl, b_impl, c_impl, ab_impl, ac_impl, bc_impl, abc_impl;
+
+/* ---------- arena limits ----------
+ * Arena variants address nodes, characters and metadata with uint16_t, and
+ * reserve 0xFFFF as the NIL index. These are hard limits of the technique,
+ * not tuning knobs: inserts past them fail rather than wrap. */
+#define NIL              0xFFFF
+#define ARENA_MAX_ITEMS  0xFFFFu    /* usable indices 0 .. 0xFFFE */
+#define ARENA_MAX_CHARS  0xFFFFu    /* uint16_t character offsets */
+
+/* A trie stores each name once, so a second declaration of a stored name
+ * needs one extra record holding the older declaration. Paid only on
+ * redeclaration, so unique-name workloads cost exactly what they did before. */
+typedef struct {
+    uint16_t node;           /* trie node whose name was redeclared   */
+    uint16_t older;          /* meta_pool index of the older declaration */
+} ArenaShadow;
+
+/* ---------- metadata packing ---------- */
+static inline uint32_t pack_meta(uint8_t type, uint8_t scope, uint8_t sc, uint16_t off) {
+    return ((uint32_t)(type & 0xF) << 28) | ((uint32_t)scope << 20)
+         | ((uint32_t)(sc & 0xF) << 16)   | (uint32_t)off;
+}
+
+static inline void unpack_meta(uint32_t m, uint8_t *type, uint8_t *scope, uint8_t *sc, uint16_t *off) {
+    *type  = (uint8_t)((m >> 28) & 0xF);
+    *scope = (uint8_t)((m >> 20) & 0xFF);
+    *sc    = (uint8_t)((m >> 16) & 0xF);
+    *off   = (uint16_t)(m & 0xFFFF);
+}
+
+static inline uint32_t pack_symbol(const TestSymbol *s) {
+    return pack_meta(s->type, s->scope, s->storage_class, s->offset);
+}
+
+/* Unpacks rather than comparing words, so it also proves the round-trip. */
+static inline int packed_matches(uint32_t m, const TestSymbol *s) {
+    uint8_t t, sc, stc;
+    uint16_t off;
+    unpack_meta(m, &t, &sc, &stc, &off);
+    return t == s->type && sc == s->scope && stc == s->storage_class && off == s->offset;
+}
+
+static inline int fields_match(int type, int scope, int sc, int off, const TestSymbol *s) {
+    return type == s->type && scope == s->scope && sc == s->storage_class && off == s->offset;
+}
 
 /* ---------- allocation accounting ----------
  * Each live malloc costs (requested bytes + MALLOC_OVERHEAD), identical to the
- * original prototype's model. Unlike the original, frees are tracked so that
- * variants which free/reallocate (trie edge splits) are charged only for what
- * is live at the end. */
+ * original prototype's model. Frees are tracked so that variants which
+ * free/reallocate (trie edge splits) are charged only for what is live. */
 #define MALLOC_OVERHEAD 16
 #define HASH_BUCKETS    64
 
@@ -77,20 +124,10 @@ static inline unsigned hash_str(const char *s) {
     return h % HASH_BUCKETS;
 }
 
-/* ---------- implementation interface ---------- */
-typedef struct {
-    const char *label;
-    void   (*init)(void);
-    void   (*insert)(const TestSymbol *s);
-    int    (*verify)(const TestSymbol *s);   /* 1 = lookup returns exact metadata */
-    int    (*absent)(const char *key);       /* 1 = correctly not found           */
-    size_t (*total_bytes)(void);
-    void   (*breakdown)(void);
-} Impl;
-
 /* ============================================================
  * BASELINE: chained hash table, malloc per node + per name,
- * pointers, unpacked int fields.
+ * pointers, unpacked int fields. A redeclaration is simply
+ * another node (inserted at the chain head, so it shadows).
  * ============================================================ */
 typedef struct HNode {
     char *name;
@@ -103,7 +140,7 @@ static Tracker base_t;
 
 static void base_init(void) { memset(base_buckets, 0, sizeof base_buckets); base_t.payload = base_t.allocs = 0; }
 
-static void base_insert(const TestSymbol *s) {
+static int base_insert(const TestSymbol *s) {
     HNode *n = t_alloc(&base_t, sizeof(HNode));
     n->name = t_alloc(&base_t, strlen(s->name) + 1);
     strcpy(n->name, s->name);
@@ -112,21 +149,24 @@ static void base_insert(const TestSymbol *s) {
     unsigned b = hash_str(s->name);
     n->next = base_buckets[b];
     base_buckets[b] = n;
-}
-
-static HNode *base_find(const char *name) {
-    for (HNode *n = base_buckets[hash_str(name)]; n; n = n->next)
-        if (strcmp(n->name, name) == 0) return n;
-    return NULL;
+    return 0;
 }
 
 static int base_verify(const TestSymbol *s) {
-    HNode *h = base_find(s->name);
-    return h && h->type == s->type && h->scope == s->scope &&
-           h->storage_class == s->storage_class && h->offset == s->offset;
+    for (HNode *n = base_buckets[hash_str(s->name)]; n; n = n->next)
+        if (strcmp(n->name, s->name) == 0 &&
+            fields_match(n->type, n->scope, n->storage_class, n->offset, s)) return 1;
+    return 0;
 }
-static int base_absent(const char *k) { return base_find(k) == NULL; }
+
+static int base_absent(const char *k) {
+    for (HNode *n = base_buckets[hash_str(k)]; n; n = n->next)
+        if (strcmp(n->name, k) == 0) return 0;
+    return 1;
+}
+
 static size_t base_total(void) { return t_total(&base_t) + sizeof base_buckets; }
+
 static void base_breakdown(void) {
     printf("    sizeof(HNode)        : %zu B\n", sizeof(HNode));
     printf("    bucket array         : %zu B\n", sizeof base_buckets);
@@ -134,10 +174,49 @@ static void base_breakdown(void) {
            base_t.allocs, base_t.payload, base_t.allocs * (size_t)MALLOC_OVERHEAD);
 }
 
+static void base_destroy(void) {
+    for (size_t b = 0; b < HASH_BUCKETS; b++) {
+        HNode *n = base_buckets[b];
+        while (n) {
+            HNode *next = n->next;
+            t_free(&base_t, n->name, strlen(n->name) + 1);
+            t_free(&base_t, n, sizeof(HNode));
+            n = next;
+        }
+        base_buckets[b] = NULL;
+    }
+}
+
 static const Impl BASELINE_IMPL = {
     "BASELINE (hash + malloc + pointers + unpacked ints)",
-    base_init, base_insert, base_verify, base_absent, base_total, base_breakdown
+    base_init, base_insert, base_verify, base_absent, base_total, base_breakdown, base_destroy
 };
+
+/* ---------- test data (the original prototype's 30 identifiers) ---------- */
+static const TestSymbol TEST_SYMBOLS[] = {
+    {"counter",        0, 0, 1,   0}, {"counter_max",    0, 0, 1,   4},
+    {"counter_min",    0, 0, 1,   8}, {"counter_reset",  3, 1, 3,   0},
+    {"count",          0, 1, 0,   0}, {"count_all",      0, 1, 0,   4},
+    {"temp",           1, 0, 1,  12}, {"temp_max",       1, 0, 1,  13},
+    {"temp_min",       1, 0, 1,  14}, {"temp_buffer",    2, 0, 1,  16},
+    {"sensor_id",      0, 0, 1,  24}, {"sensor_value",   0, 0, 1,  28},
+    {"sensor_read",    3, 1, 3,   0}, {"sensor_write",   3, 1, 3,   0},
+    {"led_pin",        0, 0, 1,  32}, {"led_state",      0, 0, 1,  36},
+    {"led_toggle",     3, 1, 3,   0}, {"buffer",         2, 0, 1,  40},
+    {"buffer_size",    0, 0, 1,  44}, {"buffer_ptr",     2, 0, 1,  48},
+    {"status",         0, 0, 1,  52}, {"status_flag",    0, 0, 1,  56},
+    {"status_code",    0, 0, 1,  60}, {"init",           3, 1, 3,   0},
+    {"init_flag",      0, 2, 0,   0}, {"main",           3, 1, 3,   0},
+    {"handler",        3, 1, 3,   0}, {"handler_id",     0, 2, 0,   4},
+    {"config",         3, 0, 1,  64}, {"config_flag",    0, 0, 1,  68},
+};
+#define NUM_SYMBOLS (sizeof(TEST_SYMBOLS) / sizeof(TEST_SYMBOLS[0]))
+
+static inline size_t test_name_bytes(void) {
+    size_t t = 0;
+    for (size_t i = 0; i < NUM_SYMBOLS; i++) t += strlen(TEST_SYMBOLS[i].name) + 1;
+    return t;
+}
 
 /* ============================================================
  * Harness: run baseline and ONE variant on identical input.
@@ -145,17 +224,19 @@ static const Impl BASELINE_IMPL = {
 static inline int run_experiment(const char *title, const Impl *var) {
     const Impl *base = &BASELINE_IMPL;
     size_t bsnap[NUM_SYMBOLS], vsnap[NUM_SYMBOLS];
+    int ok = 1;
 
     base->init();
     var->init();
     for (size_t i = 0; i < NUM_SYMBOLS; i++) {
-        base->insert(&TEST_SYMBOLS[i]);
-        var->insert(&TEST_SYMBOLS[i]);
+        if (base->insert(&TEST_SYMBOLS[i]) != 0 || var->insert(&TEST_SYMBOLS[i]) != 0) {
+            printf("INSERT FAILED '%s' (arena full)\n", TEST_SYMBOLS[i].name);
+            ok = 0;
+        }
         bsnap[i] = base->total_bytes();
         vsnap[i] = var->total_bytes();
     }
 
-    int ok = 1;
     for (size_t i = 0; i < NUM_SYMBOLS; i++) {
         if (!base->verify(&TEST_SYMBOLS[i])) { printf("BASELINE MISMATCH '%s'\n", TEST_SYMBOLS[i].name); ok = 0; }
         if (!var->verify(&TEST_SYMBOLS[i]))  { printf("VARIANT MISMATCH  '%s'\n", TEST_SYMBOLS[i].name); ok = 0; }
@@ -185,6 +266,9 @@ static inline int run_experiment(const char *title, const Impl *var) {
         printf("  %-8zu %2d / %zu        %2d / %zu\n", budgets[b], bf, NUM_SYMBOLS, vf, NUM_SYMBOLS);
     }
     printf("\n");
+
+    base->destroy();
+    var->destroy();
     return ok ? 0 : 1;
 }
 
