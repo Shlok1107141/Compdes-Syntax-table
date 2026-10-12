@@ -23,10 +23,16 @@ Response: {
 }
 ```
 
-`peak` is **additive** — every locked field above it is unchanged. The
-whole-program figures keep every declaration; `peak` is the largest table needed
-at any single point if each scope released its symbols when it closed (what a
-compiler that frees block scopes would need).
+Two additions, both **additive** — every locked field is unchanged:
+
+- `peak`: the whole-program figures keep every declaration; `peak` is the
+  largest table needed at any single point if each scope released its symbols
+  when it closed (what a compiler that frees block scopes would need).
+- `references` on each `symbol_table` entry: how many identifier uses resolve
+  to that declaration. Each use is resolved through the compressed table's
+  scoped lookup — the innermost declaration of the name still in scope, so
+  shadowing resolves the way a compiler does — and cross-checked against an
+  independent resolver on every request.
 
 A real response is checked in at [`examples/analyze_response.json`](examples/analyze_response.json)
 — use it as the frontend stub; it is generated from the engine, not hand-written.
@@ -143,7 +149,14 @@ typedef and function-pointer declarations; storage classes; nested block scopes;
 `for`-statement scopes; shadowing; bit-fields; comments, string/char literals and
 preprocessor lines (ignored).
 
-Known limits: array sizes given by macros are unknown (the analyzer does not
-preprocess), so such arrays are sized as one element; K&R parameter lists are not
-modelled; `for`-init declarations share the depth of the loop body; offsets
-saturate at 65535 and scope depth at 255, the widths the bit-packing allows.
+Array sizes may be integer literals or object-like integer macros
+(`#define N 16` … `char buf[N];`).
+
+Known limits: the analyzer does not preprocess, so any other macro — and any
+array size that is an expression (`[N + 1]`) — is unknown and the array is sized
+as one element; K&R parameter lists are not modelled; `for`-init declarations
+share the depth of the loop body; struct members are not resolved through
+`.`/`->` (that needs type information); offsets saturate at 65535 and scope depth
+at 255, the widths the bit-packing allows. Past the 16-bit arena limits (65,535
+nodes or 64 KiB of name characters) the request fails with a clear 400 rather
+than wrapping.

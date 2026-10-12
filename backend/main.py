@@ -64,6 +64,11 @@ class Symbol(BaseModel):
     scope: int
     storage_class: str
     offset: int
+    references: int = Field(
+        0,
+        description="Uses of this declaration, resolved through the compressed table's "
+                    "scoped lookup (additive to the locked contract).",
+    )
 
 
 class Ablation(BaseModel):

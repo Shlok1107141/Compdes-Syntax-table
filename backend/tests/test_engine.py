@@ -32,6 +32,7 @@ def test_declarations_get_type_scope_and_storage(run_engine):
     assert syms["counter_max"][0] == {
         "name": "counter_max", "type": "int", "scope": 0,
         "storage_class": "global", "offset": syms["counter_max"][0]["offset"],
+        "references": 0,
     }
     assert syms["counter"][0]["storage_class"] == "static"
     assert syms["temp_buffer"][0]["type"] == "array"

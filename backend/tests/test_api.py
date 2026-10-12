@@ -25,7 +25,7 @@ def test_analyze_returns_exactly_the_contract(client):
     assert isinstance(body["baseline_bytes"], int)
     assert isinstance(body["compressed_bytes"], int)
     assert isinstance(body["savings_pct"], float)
-    assert set(body["symbol_table"][0]) == {"name", "type", "scope", "storage_class", "offset"}
+    assert set(body["symbol_table"][0]) == {"name", "type", "scope", "storage_class", "offset", "references"}
     assert set(body["ablation"]) == {
         "trie_only", "arena_only", "bitpack_only",
         "trie_arena", "trie_bitpack", "arena_bitpack",

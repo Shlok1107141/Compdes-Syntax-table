@@ -48,6 +48,11 @@ typedef struct {
 
 extern const Impl a_impl, b_impl, c_impl, ab_impl, ac_impl, bc_impl, abc_impl;
 
+/* Scoped lookup on the compressed (ABC) table: writes every declaration of
+ * `name` into out[], newest first, as insertion indices; returns how many.
+ * A use resolves to the first one whose scope is still open. */
+size_t abc_declarations(const char *name, uint16_t *out, size_t max);
+
 /* ---------- arena limits ----------
  * Arena variants address nodes, characters and metadata with uint16_t, and
  * reserve 0xFFFF as the NIL index. These are hard limits of the technique,
