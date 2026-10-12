@@ -3,7 +3,12 @@
 *.out
 engine/symtab_demo
 engine/symtab_stress
+engine/symtab_analyze
+engine/*_san
 *.exe
+
+# pytest
+.pytest_cache/
 
 # Python
 __pycache__/
