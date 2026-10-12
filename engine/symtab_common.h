@@ -142,7 +142,7 @@ static const Impl BASELINE_IMPL = {
 /* ============================================================
  * Harness: run baseline and ONE variant on identical input.
  * ============================================================ */
-static int run_experiment(const char *title, const Impl *var) {
+static inline int run_experiment(const char *title, const Impl *var) {
     const Impl *base = &BASELINE_IMPL;
     size_t bsnap[NUM_SYMBOLS], vsnap[NUM_SYMBOLS];
 

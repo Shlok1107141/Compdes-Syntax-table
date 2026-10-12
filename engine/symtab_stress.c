@@ -25,12 +25,27 @@
  * stdout carries ONLY rows. All diagnostics go to stderr.
  *
  * usage: stress_<cfg> [seed]      (default seed = 1)
+ *
+ * Compiled WITHOUT -DCFG this file builds a stub main() that prints a hint to
+ * stderr and exits 0, so blind "compile every .c" CI steps succeed.
  */
 #include "symtab_common.h"
 
 #ifndef CFG
-#error "define CFG (function prefix, e.g. -DCFG=ab)"
-#endif
+/* ---- Fallback: "naked" build (no -DCFG). ----------------------------------
+ * CI and IDEs sometimes compile every .c file with no configuration flags.
+ * Compile cleanly to a harmless stub instead of tripping the #error guards
+ * below. Real measurements need the -D flags; see run_sweep.sh, which builds
+ * the 7 configurations. The stub writes nothing to stdout, so it can never
+ * inject bogus rows into the results stream (compare_table.py rejects an
+ * empty stream). */
+int main(void) {
+    fputs("symtab_stress: built without -DCFG/-DCFG_LABEL/-DVARIANT_SRC; nothing to measure.\n"
+          "              use run_sweep.sh to build and run the 7 configurations.\n", stderr);
+    return 0;
+}
+#else /* CFG defined: real stress build */
+
 #ifndef CFG_LABEL
 #error "define CFG_LABEL (row label string, e.g. -DCFG_LABEL='\"AB\"')"
 #endif
@@ -230,3 +245,5 @@ int main(int argc, char **argv) {
             if (st_run_one(p, patterns[p], ns[k], seed)) return 1;
     return 0;
 }
+
+#endif /* CFG */
