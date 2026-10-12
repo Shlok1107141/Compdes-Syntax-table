@@ -1,4 +1,4 @@
-import type { AnalyzeRequest, AnalyzeResponse, SymbolEntry, AblationData, ExecutionMode } from '../types';
+import type { AnalyzeRequest, AnalyzeResponse, SymbolEntry, AblationData, ExecutionMode, HealthStatus } from '../types';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -243,6 +243,40 @@ function buildRadixTrieMetrics(names: string[]): { uniqueEdges: number; deduplic
 }
 
 /**
+ * Ping backend health endpoint to detect if the FastAPI server and engine are running.
+ */
+export async function checkBackendHealth(): Promise<HealthStatus> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+  try {
+    // Try relative /api/health (via Vite proxy) first, then direct API_BASE_URL
+    let response: Response;
+    try {
+      response = await fetch('/api/health', { signal: controller.signal });
+    } catch {
+      response = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+    }
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return { online: false, message: `Server returned status ${response.status}` };
+    }
+
+    const data = await response.json();
+    return {
+      online: true,
+      engineReady: Boolean(data.engine_ready),
+      message: data.status || 'ok',
+    };
+  } catch {
+    clearTimeout(timeoutId);
+    return { online: false, message: 'Backend is offline' };
+  }
+}
+
+/**
  * Execute symbol analysis.
  * Supports both Live FastAPI backend and local Mock/Simulation mode.
  */
@@ -264,29 +298,68 @@ export async function analyzeCode(
   const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
 
   try {
-    const response = await fetch(`${API_BASE_URL}/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ code } as AnalyzeRequest),
-      signal: controller.signal,
-    });
+    let response: Response;
+    try {
+      // Try through Vite proxy first
+      response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code } as AnalyzeRequest),
+        signal: controller.signal,
+      });
+    } catch {
+      // Fallback to direct CORS URL
+      response = await fetch(`${API_BASE_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code } as AnalyzeRequest),
+        signal: controller.signal,
+      });
+    }
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Backend responded with status ${response.status}: ${errorText || response.statusText}`);
+      let errorDetail = errorText;
+      try {
+        const parsed = JSON.parse(errorText);
+        if (parsed.detail) {
+          errorDetail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
+        }
+      } catch {
+        // Fall back to raw text
+      }
+
+      if (response.status === 413) {
+        throw new Error(`Payload Too Large (HTTP 413): ${errorDetail}`);
+      } else if (response.status === 429) {
+        throw new Error(`Rate Limit Exceeded (HTTP 429): ${errorDetail}`);
+      } else if (response.status === 400) {
+        throw new Error(`C Parse Error (HTTP 400): ${errorDetail}`);
+      }
+
+      throw new Error(`Backend Error (${response.status}): ${errorDetail || response.statusText}`);
     }
 
     const data: AnalyzeResponse = await response.json();
     return data;
   } catch (err: unknown) {
     clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Analysis request timed out after 8 seconds.');
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        throw new Error('Analysis request timed out after 8 seconds.');
+      }
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        throw new Error('Could not connect to FastAPI server at http://localhost:8000. Start backend with "uvicorn main:app --reload --port 8000".');
+      }
+      throw err;
     }
-    throw err;
+    throw new Error('An unexpected error occurred during analysis.');
   }
 }
+

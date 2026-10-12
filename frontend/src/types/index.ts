@@ -28,3 +28,9 @@ export interface AnalyzeRequest {
 }
 
 export type ExecutionMode = 'mock' | 'live';
+
+export interface HealthStatus {
+  online: boolean;
+  engineReady?: boolean;
+  message?: string;
+}
