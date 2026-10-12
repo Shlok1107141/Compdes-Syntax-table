@@ -53,6 +53,12 @@ jobs:
             ./symtab_stress
           fi
 
+      - name: Analyzer (links all variants) under sanitizers
+        if: hashFiles('engine/symtab_analyze.c') != ''
+        run: |
+          cd engine
+          make check
+
   backend:
     name: backend
     runs-on: ubuntu-latest
@@ -121,3 +127,40 @@ jobs:
         run: |
           cd frontend
           npm run build
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build images
+        if: hashFiles('docker-compose.yml') != ''
+        run: docker compose build
+
+      - name: Smoke-test the stack through nginx
+        if: hashFiles('docker-compose.yml') != ''
+        run: |
+          docker compose up -d --wait
+          curl -fsS http://localhost:8080/ | grep -q '<div id="root">'
+          curl -fsS http://localhost:8080/api/health | grep -q '"engine_ready":true'
+          curl -fsS -X POST http://localhost:8080/api/analyze \
+               -H 'Content-Type: application/json' \
+               -d '{"code":"int counter; int counter_max; void f(void) { int i; i = counter; }"}' \
+            | tee /dev/stderr | grep -q '"compressed_bytes"'
+
+      - name: Adversarial end-to-end suite against the containers
+        if: hashFiles('backend/scripts/adversarial_e2e.py') != ''
+        run: python3 backend/scripts/adversarial_e2e.py http://localhost:8080/api
+
+      - name: Show logs on failure
+        if: failure() && hashFiles('docker-compose.yml') != ''
+        run: docker compose logs
+
+      - name: Tear down
+        if: always() && hashFiles('docker-compose.yml') != ''
+        run: docker compose down

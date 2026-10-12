@@ -1262,9 +1262,11 @@ static void print_json(const size_t totals[NUM_VARIANTS], const Peak *peak) {
         if (i) putchar(',');
         printf("{\"name\":\"");
         json_escape(d->name, strlen(d->name));
-        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,\"references\":%u}",
+        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,"
+               "\"references\":%u,\"packed\":%lu}",
                TYPE_NAMES[d->type & 0xF], (unsigned)d->scope,
-               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i]);
+               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i],
+               (unsigned long)pack_symbol(&symbols[i]));
     }
     printf("],");
 

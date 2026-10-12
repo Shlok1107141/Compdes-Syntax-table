@@ -1,0 +1,45 @@
+# docker compose up --build   ->   http://localhost:8080
+#
+# The backend parses untrusted source text with a native binary, so it runs
+# as an unprivileged user on a read-only filesystem with no Linux
+# capabilities, bounded memory/CPU/process count, and no route to the
+# internet: it sits only on an internal network that nginx reaches.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      SYMTAB_TRUST_PROXY_HEADERS: "1"      # nginx sets X-Real-IP; see frontend/nginx.conf
+      SYMTAB_ALLOWED_ORIGINS: "http://localhost:8080"
+    read_only: true
+    tmpfs:
+      - /tmp                               # per-request scratch dir for the analyzer
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 64
+    networks: [internal]
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp                               # nginx-unprivileged keeps pid and temp files here
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [internal, public]
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true                         # no egress for the backend
+  public: {}

@@ -25,7 +25,7 @@ def test_analyze_returns_exactly_the_contract(client):
     assert isinstance(body["baseline_bytes"], int)
     assert isinstance(body["compressed_bytes"], int)
     assert isinstance(body["savings_pct"], float)
-    assert set(body["symbol_table"][0]) == {"name", "type", "scope", "storage_class", "offset", "references"}
+    assert set(body["symbol_table"][0]) == {"name", "type", "scope", "storage_class", "offset", "references", "packed"}
     assert set(body["ablation"]) == {
         "trie_only", "arena_only", "bitpack_only",
         "trie_arena", "trie_bitpack", "arena_bitpack",
@@ -71,6 +71,31 @@ def test_rate_limit_returns_429(client, monkeypatch):
     blocked = client.post("/analyze", json={"code": "int x;"})
     assert blocked.status_code == 429
     assert "rate limit" in blocked.json()["detail"]
+
+
+def test_proxy_header_is_ignored_unless_trusted(client, monkeypatch):
+    """A client must not dodge the rate limit by inventing X-Real-IP."""
+    monkeypatch.setattr(main, "RATE_LIMIT_REQUESTS", 2)
+    monkeypatch.setattr(main, "TRUST_PROXY_HEADERS", False)
+    main._hits.clear()
+    for n in range(2):
+        assert client.post("/analyze", json={"code": "int x;"},
+                           headers={"X-Real-IP": f"10.0.0.{n}"}).status_code == 200
+    assert client.post("/analyze", json={"code": "int x;"},
+                       headers={"X-Real-IP": "10.0.0.99"}).status_code == 429
+
+
+def test_trusted_proxy_header_separates_clients(client, monkeypatch):
+    """Behind nginx, each real client gets its own bucket."""
+    monkeypatch.setattr(main, "RATE_LIMIT_REQUESTS", 1)
+    monkeypatch.setattr(main, "TRUST_PROXY_HEADERS", True)
+    main._hits.clear()
+    assert client.post("/analyze", json={"code": "int x;"},
+                       headers={"X-Real-IP": "10.0.0.1"}).status_code == 200
+    assert client.post("/analyze", json={"code": "int x;"},
+                       headers={"X-Real-IP": "10.0.0.2"}).status_code == 200
+    assert client.post("/analyze", json={"code": "int x;"},
+                       headers={"X-Real-IP": "10.0.0.1"}).status_code == 429
 
 
 def test_cors_allows_the_frontend_origin_only(client):

@@ -19,81 +19,36 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
     );
   }
 
-  const { baseline_bytes, compressed_bytes, savings_pct, symbol_table, ablation } = data;
+  const { baseline_bytes, compressed_bytes, savings_pct, symbol_table, ablation, peak } = data;
   const netBytesSaved = Math.max(0, baseline_bytes - compressed_bytes);
   const symbolCount = symbol_table.length;
   const baselinePerSymbol = symbolCount > 0 ? (baseline_bytes / symbolCount).toFixed(1) : '0';
   const compressedPerSymbol = symbolCount > 0 ? (compressed_bytes / symbolCount).toFixed(1) : '0';
   const densityMultiplier = compressed_bytes > 0 ? (baseline_bytes / compressed_bytes).toFixed(1) : '1.0';
 
-  // Construct chart configurations for all techniques
-  const configurations = [
-    {
-      name: 'Baseline Hash Table',
-      bytes: baseline_bytes,
-      savings: 0,
-      color: 'bg-slate-700',
-      textColor: 'text-slate-400',
-      badge: 'Uncompressed Baseline',
-    },
-    {
-      name: 'Bitpack Only',
-      bytes: ablation.bitpack_only || Math.round(baseline_bytes * 0.84),
-      savings: Math.round(((baseline_bytes - (ablation.bitpack_only || baseline_bytes * 0.84)) / baseline_bytes) * 100),
-      color: 'bg-sky-600',
-      textColor: 'text-sky-400',
-      badge: 'Single Technique',
-    },
-    {
-      name: 'Arena Only',
-      bytes: ablation.arena_only || Math.round(baseline_bytes * 0.56),
-      savings: Math.round(((baseline_bytes - (ablation.arena_only || baseline_bytes * 0.56)) / baseline_bytes) * 100),
-      color: 'bg-blue-600',
-      textColor: 'text-blue-400',
-      badge: 'Single Technique',
-    },
-    {
-      name: 'Trie Only',
-      bytes: ablation.trie_only || Math.round(baseline_bytes * 0.65),
-      savings: Math.round(((baseline_bytes - (ablation.trie_only || baseline_bytes * 0.65)) / baseline_bytes) * 100),
-      color: 'bg-indigo-600',
-      textColor: 'text-indigo-400',
-      badge: 'Single Technique',
-    },
-    {
-      name: 'Trie + Bitpack',
-      bytes: ablation.trie_bitpack || Math.round(baseline_bytes * 0.51),
-      savings: Math.round(((baseline_bytes - (ablation.trie_bitpack || baseline_bytes * 0.51)) / baseline_bytes) * 100),
-      color: 'bg-violet-600',
-      textColor: 'text-violet-400',
-      badge: 'Pairwise Combo',
-    },
-    {
-      name: 'Arena + Bitpack',
-      bytes: ablation.arena_bitpack || Math.round(baseline_bytes * 0.45),
-      savings: Math.round(((baseline_bytes - (ablation.arena_bitpack || baseline_bytes * 0.45)) / baseline_bytes) * 100),
-      color: 'bg-purple-600',
-      textColor: 'text-purple-400',
-      badge: 'Pairwise Combo',
-    },
-    {
-      name: 'Trie + Arena',
-      bytes: ablation.trie_arena || Math.round(baseline_bytes * 0.40),
-      savings: Math.round(((baseline_bytes - (ablation.trie_arena || baseline_bytes * 0.40)) / baseline_bytes) * 100),
-      color: 'bg-fuchsia-600',
-      textColor: 'text-fuchsia-400',
-      badge: 'Pairwise Combo',
-    },
-    {
-      name: 'Full 3-in-1 Combined',
-      bytes: compressed_bytes,
-      savings: savings_pct,
-      color: 'bg-gradient-to-r from-emerald-500 to-teal-400',
-      textColor: 'text-emerald-400',
-      badge: 'Optimal Architecture',
-      highlight: true,
-    },
+  // Every byte count below is measured by the C engine on a real structure.
+  const savingsOf = (bytes: number) =>
+    baseline_bytes > 0 ? Math.round(((baseline_bytes - bytes) / baseline_bytes) * 1000) / 10 : 0;
+
+  const techniques = [
+    { key: 'bitpack_only', name: 'Bitpack Only', bytes: ablation.bitpack_only, color: 'bg-sky-600', textColor: 'text-sky-400', badge: 'Single Technique' },
+    { key: 'arena_only', name: 'Arena Only', bytes: ablation.arena_only, color: 'bg-blue-600', textColor: 'text-blue-400', badge: 'Single Technique' },
+    { key: 'trie_only', name: 'Trie Only', bytes: ablation.trie_only, color: 'bg-indigo-600', textColor: 'text-indigo-400', badge: 'Single Technique' },
+    { key: 'trie_bitpack', name: 'Trie + Bitpack', bytes: ablation.trie_bitpack, color: 'bg-violet-600', textColor: 'text-violet-400', badge: 'Pairwise Combo' },
+    { key: 'arena_bitpack', name: 'Arena + Bitpack', bytes: ablation.arena_bitpack, color: 'bg-purple-600', textColor: 'text-purple-400', badge: 'Pairwise Combo' },
+    { key: 'trie_arena', name: 'Trie + Arena', bytes: ablation.trie_arena, color: 'bg-fuchsia-600', textColor: 'text-fuchsia-400', badge: 'Pairwise Combo' },
+    { key: 'all_three', name: 'All Three Combined', bytes: compressed_bytes, color: 'bg-gradient-to-r from-emerald-500 to-teal-400', textColor: 'text-emerald-400', badge: 'Trie + Arena + Bitpack' },
   ];
+  const winner = techniques.reduce((best, t) => (t.bytes < best.bytes ? t : best));
+  const allThreeWins = winner.key === 'all_three';
+
+  const configurations = [
+    { key: 'baseline', name: 'Baseline Hash Table', bytes: baseline_bytes, color: 'bg-slate-700', textColor: 'text-slate-400', badge: 'Uncompressed Baseline' },
+    ...techniques,
+  ].map((cfg) => ({ ...cfg, savings: cfg.key === 'baseline' ? 0 : savingsOf(cfg.bytes), isWinner: cfg.key === winner.key }));
+
+  // Scale bars to the largest configuration: a trie with 8-byte pointers can exceed the baseline.
+  const largestBytes = Math.max(...configurations.map((c) => c.bytes), 1);
 
   return (
     <div className="space-y-6">
@@ -193,8 +148,10 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
                 Ablation Comparison (All 7 Configurations vs Baseline)
               </h3>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Validates that combining all three techniques outperforms each technique applied alone or in pairs.
+            <p className="text-xs text-slate-400 mt-1 max-w-xl">
+              Every bar is a real structure the C engine built from this code and verified. Which combination is
+              smallest depends on the program: the trie pays off when names share prefixes or are redeclared across
+              scopes, and costs extra on flat tables of unrelated names.
             </p>
           </div>
 
@@ -206,22 +163,39 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
         {/* Horizontal Bar Chart */}
         <div className="space-y-3.5">
           {configurations.map((cfg) => {
-            const percentageOfBaseline = Math.round((cfg.bytes / Math.max(1, baseline_bytes)) * 100);
+            const widthPct = Math.round((cfg.bytes / largestBytes) * 100);
+            const verdict =
+              cfg.key === 'baseline'
+                ? 'Baseline'
+                : cfg.savings > 0
+                ? `-${cfg.savings}%`
+                : cfg.savings < 0
+                ? `+${-cfg.savings}% larger`
+                : 'same';
             return (
-              <div key={cfg.name} className="space-y-1">
+              <div key={cfg.key} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2">
-                    <span className={`font-semibold ${cfg.highlight ? 'text-emerald-300' : 'text-slate-300'}`}>
+                    <span className={`font-semibold ${cfg.isWinner ? 'text-emerald-300' : 'text-slate-300'}`}>
                       {cfg.name}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
                       {cfg.badge}
                     </span>
+                    {cfg.isWinner && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
+                        Smallest for this input
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center space-x-3 font-mono">
-                    <span className="text-slate-400">{cfg.bytes} B</span>
-                    <span className={`font-bold min-w-[50px] text-right ${cfg.savings > 0 ? cfg.textColor : 'text-slate-500'}`}>
-                      {cfg.savings > 0 ? `-${cfg.savings}%` : 'Baseline'}
+                    <span className="text-slate-400">{cfg.bytes.toLocaleString()} B</span>
+                    <span
+                      className={`font-bold min-w-[50px] text-right ${
+                        cfg.savings > 0 ? cfg.textColor : cfg.savings < 0 ? 'text-rose-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {verdict}
                     </span>
                   </div>
                 </div>
@@ -230,9 +204,9 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
                 <div className="h-3 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ease-out ${cfg.color} ${
-                      cfg.highlight ? 'shadow-sm shadow-emerald-500/50' : ''
+                      cfg.isWinner ? 'shadow-sm shadow-emerald-500/50' : ''
                     }`}
-                    style={{ width: `${Math.max(6, Math.min(100, percentageOfBaseline))}%` }}
+                    style={{ width: `${Math.max(3, widthPct)}%` }}
                   />
                 </div>
               </div>
@@ -244,13 +218,53 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
           <div className="flex items-center space-x-1.5">
             <ArrowDownRight className="w-4 h-4 text-emerald-400" />
             <span>
-              <strong>Verified Outcome:</strong> The 3-in-1 compressed model achieves{' '}
-              <span className="text-emerald-400 font-bold">{savings_pct}%</span> memory savings.
+              {allThreeWins ? (
+                <>
+                  <strong>All three techniques together</strong> are the smallest structure here:{' '}
+                  <span className="text-emerald-400 font-bold">{savings_pct}%</span> below the baseline.
+                </>
+              ) : (
+                <>
+                  <strong>{winner.name}</strong> is the smallest here ({winner.bytes.toLocaleString()} B, -
+                  {savingsOf(winner.bytes)}%); all three combined saves{' '}
+                  <span className="text-emerald-400 font-bold">{savings_pct}%</span>.
+                </>
+              )}
             </span>
           </div>
           <span className="text-slate-500 font-mono">Formula: ((Baseline - Config) / Baseline) * 100</span>
         </div>
       </div>
+
+      {/* Peak memory if scopes release their symbols on exit */}
+      {peak && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-200">Peak Memory with Scope Release</h4>
+              <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                The figures above keep every declaration. A compiler can free a block's symbols when the block
+                closes; this is the largest table needed at any one point ({peak.live_symbols} of {symbolCount}{' '}
+                symbols alive together).
+              </p>
+            </div>
+            <div className="flex items-center space-x-6 font-mono text-sm">
+              <div>
+                <div className="text-[10px] uppercase text-slate-500">Baseline peak</div>
+                <div className="text-slate-200 font-bold">{peak.baseline_bytes.toLocaleString()} B</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-slate-500">Compressed peak</div>
+                <div className="text-emerald-300 font-bold">{peak.compressed_bytes.toLocaleString()} B</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-slate-500">Saved</div>
+                <div className="text-emerald-400 font-bold">{peak.savings_pct}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
