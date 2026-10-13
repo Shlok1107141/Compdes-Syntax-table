@@ -47,6 +47,108 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    const { selectionStart, selectionEnd, value } = textarea;
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const TAB = '    '; // Standard 4-space tab gap for C code
+
+      if (selectionStart === selectionEnd) {
+        if (e.shiftKey) {
+          // Shift+Tab: Outdent single line if it starts with spaces
+          const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+          const linePrefix = value.substring(lineStart, selectionStart);
+          if (linePrefix.startsWith(TAB)) {
+            const nextValue = value.substring(0, lineStart) + value.substring(lineStart + 4);
+            handleTextChange(nextValue);
+            requestAnimationFrame(() => {
+              textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, selectionStart - 4);
+            });
+          } else if (linePrefix.startsWith(' ')) {
+            const spacesToRemove = linePrefix.match(/^ +/)?.[0].length || 0;
+            const removeCount = Math.min(4, spacesToRemove);
+            const nextValue = value.substring(0, lineStart) + value.substring(lineStart + removeCount);
+            handleTextChange(nextValue);
+            requestAnimationFrame(() => {
+              textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, selectionStart - removeCount);
+            });
+          }
+        } else {
+          // Tab: Insert 4 spaces at cursor position
+          const nextValue = value.substring(0, selectionStart) + TAB + value.substring(selectionEnd);
+          handleTextChange(nextValue);
+          requestAnimationFrame(() => {
+            textarea.selectionStart = textarea.selectionEnd = selectionStart + TAB.length;
+          });
+        }
+      } else {
+        // Multi-line selection: indent or outdent all selected lines
+        const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+        const lineEnd = value.indexOf('\n', selectionEnd);
+        const effectiveEnd = lineEnd === -1 ? value.length : lineEnd;
+
+        const selectedText = value.substring(lineStart, effectiveEnd);
+        const lines = selectedText.split('\n');
+
+        let startDelta = 0;
+        let totalDelta = 0;
+
+        let modifiedLines: string[];
+        if (e.shiftKey) {
+          // Shift+Tab: Outdent lines
+          modifiedLines = lines.map((line, idx) => {
+            if (line.startsWith(TAB)) {
+              if (idx === 0) startDelta = -4;
+              totalDelta -= 4;
+              return line.substring(4);
+            } else if (line.startsWith(' ')) {
+              const spaces = line.match(/^ +/)?.[0].length || 0;
+              const removeCount = Math.min(4, spaces);
+              if (idx === 0) startDelta = -removeCount;
+              totalDelta -= removeCount;
+              return line.substring(removeCount);
+            }
+            return line;
+          });
+        } else {
+          // Tab: Indent all lines
+          modifiedLines = lines.map((line, idx) => {
+            if (idx === 0) startDelta = 4;
+            totalDelta += 4;
+            return TAB + line;
+          });
+        }
+
+        const nextValue =
+          value.substring(0, lineStart) + modifiedLines.join('\n') + value.substring(effectiveEnd);
+        handleTextChange(nextValue);
+        requestAnimationFrame(() => {
+          textarea.selectionStart = Math.max(lineStart, selectionStart + startDelta);
+          textarea.selectionEnd = Math.max(lineStart, selectionEnd + totalDelta);
+        });
+      }
+    } else if (e.key === 'Enter') {
+      // Auto-indent on Enter to preserve current indentation level
+      const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const currentLine = value.substring(lineStart, selectionStart);
+      const matchIndent = currentLine.match(/^[ \t]+/);
+      const indent = matchIndent ? matchIndent[0] : '';
+      const extraIndent = currentLine.trim().endsWith('{') ? '    ' : '';
+
+      if (indent || extraIndent) {
+        e.preventDefault();
+        const addition = '\n' + indent + extraIndent;
+        const nextValue = value.substring(0, selectionStart) + addition + value.substring(selectionEnd);
+        handleTextChange(nextValue);
+        requestAnimationFrame(() => {
+          textarea.selectionStart = textarea.selectionEnd = selectionStart + addition.length;
+        });
+      }
+    }
+  };
+
   const activePreset = SAMPLE_PRESETS.find((p) => p.id === selectedPresetId) || CUSTOM_PRESET;
 
   return (
@@ -110,6 +212,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         <textarea
           value={code}
           onChange={(e) => handleTextChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="// Paste or write your own C code declarations, structs, and functions here...
 int sensor_temp;
 int sensor_press;
