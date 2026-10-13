@@ -51,9 +51,9 @@ Click any link below to filter issues directly on GitHub:
 | [#11](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/11) | `@hardikpardik` | `domain:ablation` | `day-1` | Implement 3 Isolated Single-Technique Engine Variants | `P0-critical` | **CLOSED (PR #27)** |
 | [#12](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/12) | `@hardikpardik` | `domain:ablation` | `day-2` | Implement 3 Pairwise Combination Engine Variants | `P0-critical` | **CLOSED (PR #28)** |
 | [#13](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/13) | `@hardikpardik` | `domain:ablation` | `day-3` | Multi-Configuration Stress Sweep & Final Comparison Table | `P0-critical` | **CLOSED (PR #29)** |
-| [#14](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/14) | `@Eben923` | `domain:research-paper` | `day-1` | Research Paper Draft - Problem, Architecture & Methodology | `P1-high` | **OPEN (Ready)** |
-| [#15](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/15) | `@Eben923` | `domain:research-paper` | `day-2` | Research Paper Results & Discussion Synthesis | `P0-critical` | **OPEN (Blocked)** |
-| [#16](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/16) | `@Eben923` | `domain:testing` | `day-3` | Adversarial End-to-End Test Suite Execution | `P0-critical` | **OPEN (Blocked)** |
+| [#14](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/14) | `@Eben923` | `domain:research-paper` | `day-1` | Research Paper Draft - Problem, Architecture & Methodology | `P1-high` | **CLOSED (`MANUSCRIPT.md`)** |
+| [#15](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/15) | `@Eben923` | `domain:research-paper` | `day-2` | Research Paper Results & Discussion Synthesis | `P0-critical` | **CLOSED (`MANUSCRIPT.md`)** |
+| [#16](https://github.com/Shlok1107141/Compdes-Syntax-table/issues/16) | `@Eben923` | `domain:testing` | `day-3` | Adversarial End-to-End Test Suite Execution | `P0-critical` | **CLOSED (`ADVERSARIAL_TEST_REPORT.md`)** |
 
 ---
 
