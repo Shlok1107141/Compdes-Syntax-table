@@ -80,3 +80,4 @@ status:completed          Completed & Merged into main
 status:ready-to-start     Unblocked & Ready for Immediate Development
 status:blocked-by-dependency Awaiting Upstream Task Completion
 ```
+CLI practice test
