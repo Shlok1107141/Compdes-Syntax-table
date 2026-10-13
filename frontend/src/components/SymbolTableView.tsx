@@ -11,8 +11,12 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
   const [selectedStorage, setSelectedStorage] = useState<string>('all');
   const [selectedScope, setSelectedScope] = useState<string>('all');
 
+
+  const [sortField, setSortField] = useState<'index' | 'name' | 'type' | 'scope' | 'offset'>('index');
+  const [sortAsc, setSortAsc] = useState<boolean>(true);
+
   const filteredSymbols = useMemo(() => {
-    return symbols.filter((sym) => {
+    const list = symbols.filter((sym) => {
       const matchesSearch =
         sym.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         sym.type.toLowerCase().includes(searchTerm.toLowerCase());
@@ -20,7 +24,27 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
       const matchesScope = selectedScope === 'all' || sym.scope.toString() === selectedScope;
       return matchesSearch && matchesStorage && matchesScope;
     });
-  }, [symbols, searchTerm, selectedStorage, selectedScope]);
+
+    if (sortField === 'index') return sortAsc ? list : [...list].reverse();
+
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'name') cmp = a.name.localeCompare(b.name);
+      else if (sortField === 'type') cmp = a.type.localeCompare(b.type);
+      else if (sortField === 'scope') cmp = a.scope - b.scope;
+      else if (sortField === 'offset') cmp = a.offset - b.offset;
+      return sortAsc ? cmp : -cmp;
+    });
+  }, [symbols, searchTerm, selectedStorage, selectedScope, sortField, sortAsc]);
+
+  const toggleSort = (field: 'index' | 'name' | 'type' | 'scope' | 'offset') => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
+  };
 
   const uniqueStorageClasses = Array.from(new Set(symbols.map((s) => s.storage_class)));
   const uniqueScopes = Array.from(new Set(symbols.map((s) => s.scope))).sort((a, b) => a - b);
@@ -132,16 +156,47 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
         </div>
       </div>
 
-      {/* Table Content */}
-      <div className="overflow-x-auto max-h-[460px]">
+      {/* Table Content with Expanded Max Height */}
+      <div className="overflow-x-auto max-h-[640px]">
         <table className="w-full text-left border-collapse text-xs">
           <thead className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-3 px-4">Identifier Name</th>
-              <th className="py-3 px-4">Type</th>
-              <th className="py-3 px-4">Scope</th>
+              <th
+                onClick={() => toggleSort('index')}
+                className="py-3 px-3 cursor-pointer hover:text-slate-950 select-none w-12 text-center"
+                title="Click to sort by index"
+              >
+                # {sortField === 'index' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
+              <th
+                onClick={() => toggleSort('name')}
+                className="py-3 px-4 cursor-pointer hover:text-slate-950 select-none"
+                title="Click to sort by name"
+              >
+                Identifier Name {sortField === 'name' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
+              <th
+                onClick={() => toggleSort('type')}
+                className="py-3 px-4 cursor-pointer hover:text-slate-950 select-none"
+                title="Click to sort by type"
+              >
+                Type {sortField === 'type' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
+              <th
+                onClick={() => toggleSort('scope')}
+                className="py-3 px-4 cursor-pointer hover:text-slate-950 select-none"
+                title="Click to sort by scope"
+              >
+                Scope {sortField === 'scope' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
               <th className="py-3 px-4">Storage Class</th>
-              <th className="py-3 px-4">Offset</th>
+              <th
+                onClick={() => toggleSort('offset')}
+                className="py-3 px-4 cursor-pointer hover:text-slate-950 select-none"
+                title="Click to sort by memory offset"
+              >
+                Offset {sortField === 'offset' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
               <th className="py-3 px-4" title="Uses resolved to this declaration by scoped lookup">Refs</th>
               <th className="py-3 px-4 text-right">Bit-Packed 32b Word</th>
             </tr>
@@ -149,20 +204,29 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
           <tbody className="divide-y divide-slate-100 font-mono">
             {filteredSymbols.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-slate-500 font-sans font-bold">
+                <td colSpan={8} className="py-10 text-center text-slate-500 font-sans font-bold">
                   No matching symbols found.
                 </td>
               </tr>
             ) : (
               filteredSymbols.map((sym, idx) => {
                 const packed = describePackedWord(sym);
+                const isMatch = searchTerm.trim() && sym.name.toLowerCase().includes(searchTerm.toLowerCase());
+
                 return (
                   <tr
                     key={`${sym.name}-${sym.scope}-${idx}`}
-                    className="hover:bg-teal-50/40 transition-colors"
+                    className={`hover:bg-teal-50/50 transition-colors ${
+                      isMatch ? 'bg-orange-50/60 font-bold' : ''
+                    }`}
                   >
-                    <td className="py-3 px-4 font-bold text-slate-900 text-sm">
-                      {sym.name}
+                    <td className="py-3 px-3 text-center text-slate-400 font-bold text-xs select-none">
+                      {String(idx + 1).padStart(2, '0')}
+                    </td>
+                    <td className="py-3 px-4 font-black text-slate-900 text-sm">
+                      <span className={isMatch ? 'bg-orange-200 px-1 py-0.5 rounded text-orange-950' : ''}>
+                        {sym.name}
+                      </span>
                     </td>
                     <td className="py-3 px-4 font-bold text-teal-800 text-xs">
                       {sym.type}
@@ -190,7 +254,7 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
                     <td className="py-3 px-4 font-bold text-slate-700">
                       +{sym.offset} B
                     </td>
-                    <td className={`py-3 px-4 font-bold ${sym.references ? 'text-slate-900' : 'text-slate-400'}`}>
+                    <td className={`py-3 px-4 font-bold ${sym.references ? 'text-teal-900' : 'text-slate-400'}`}>
                       {sym.references ?? '0'}
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -212,10 +276,16 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
 
       {/* Footer Info */}
       <div className="p-3 bg-slate-50 border-t-2 border-slate-200 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 font-medium">
-        <span>
-          💡 <span className="font-extrabold text-slate-900">Bit-Packing Scheme:</span> [Type: 4b] [Scope: 8b] [Storage Class: 4b] [Offset: 16b] = Single 32-bit integer word.
+        <div className="flex items-center space-x-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-teal-600"></span>
+          <span>
+            Showing all <strong className="text-slate-900 font-extrabold">{filteredSymbols.length}</strong> of{' '}
+            <strong className="text-slate-900 font-extrabold">{symbols.length}</strong> symbols • 100% indexed in memory
+          </span>
+        </div>
+        <span className="text-slate-600 font-mono font-bold">
+          [Type: 4b] [Scope: 8b] [Storage: 4b] [Offset: 16b] = Single 32-bit word
         </span>
-        <span className="text-slate-600 font-mono font-bold">Replaces 16 bytes of standard struct pointer padding.</span>
       </div>
     </div>
   );
