@@ -141,7 +141,7 @@ function extractSymbolsFromCode(code: string): SymbolEntry[] {
   let currentScope = 0;
   let currentOffset = 0;
 
-  const typeRegex = /\b(static\s+)?(const\s+)?(unsigned\s+)?(int|char|float|double|void|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|struct\s+\w+)\s*(\*)?\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(\(([^)]*)\))?/g;
+  const typeRegexPattern = '\\b(static\\s+)?(const\\s+)?(unsigned\\s+)?(int|char|float|double|void|uint8_t|uint16_t|uint32_t|int8_t|int16_t|int32_t|struct\\s+\\w+)\\s*(\\*+)?\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\(([^)]*)\\))?';
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -152,8 +152,11 @@ function extractSymbolsFromCode(code: string): SymbolEntry[] {
     const openBraces = (trimmed.match(/\{/g) || []).length;
     const closeBraces = (trimmed.match(/\}/g) || []).length;
 
+    // Reset regex per line to prevent lastIndex retention bugs across lines
+    const lineTypeRegex = new RegExp(typeRegexPattern, 'g');
+
     let match: RegExpExecArray | null;
-    while ((match = typeRegex.exec(line)) !== null) {
+    while ((match = lineTypeRegex.exec(line)) !== null) {
       const isStatic = Boolean(match[1]);
       const baseType = match[4].trim();
       const isPointer = Boolean(match[5]);
@@ -161,7 +164,7 @@ function extractSymbolsFromCode(code: string): SymbolEntry[] {
       const isFunction = Boolean(match[7]);
       const params = match[8];
 
-      if (['return', 'if', 'for', 'while', 'switch', 'sizeof'].includes(identifier)) {
+      if (['return', 'if', 'for', 'while', 'switch', 'sizeof', 'else', 'case', 'break', 'continue'].includes(identifier)) {
         continue;
       }
 
@@ -226,12 +229,26 @@ function extractSymbolsFromCode(code: string): SymbolEntry[] {
   }
 
   const seen = new Set<string>();
-  return symbols.filter((s) => {
+  const uniqueSymbols = symbols.filter((s) => {
     const key = `${s.name}@${s.scope}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Calculate references: count total occurrences in source code minus definition
+  for (const sym of uniqueSymbols) {
+    try {
+      const re = new RegExp(`\\b${sym.name}\\b`, 'g');
+      const matches = code.match(re);
+      const totalCount = matches ? matches.length : 1;
+      sym.references = Math.max(0, totalCount - 1);
+    } catch {
+      sym.references = 0;
+    }
+  }
+
+  return uniqueSymbols;
 }
 
 function buildRadixTrieMetrics(names: string[]): { uniqueEdges: number; deduplicatedEdgeBytes: number } {

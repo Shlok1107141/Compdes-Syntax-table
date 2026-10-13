@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Network, ZoomIn, ZoomOut, RotateCcw, Info, CheckCircle2 } from 'lucide-react';
+import { Network, ZoomIn, ZoomOut, RotateCcw, Info, CheckCircle2, Search } from 'lucide-react';
 import type { SymbolEntry } from '../types';
 
 interface RadixTrieVisualizerProps {
@@ -19,6 +19,7 @@ interface TrieNode {
 export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbols }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedNode, setSelectedNode] = useState<TrieNode | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { root, totalNodes, totalDeduplicatedBytes, rawStringBytes } = useMemo(() => {
     let nodeIdCounter = 0;
@@ -124,13 +125,21 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
 
   const renderTrieBranch = (node: TrieNode, depth = 0) => {
     const isSelected = selectedNode?.id === node.id;
+    const isHighlighted =
+      Boolean(searchQuery.trim()) &&
+      ((node.symbolName && node.symbolName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        node.edgeLabel.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
       <div key={node.id} className="flex flex-col items-center">
         {/* Node Box */}
         <div
           onClick={() => setSelectedNode(node)}
-          className={`cursor-pointer rounded-lg px-3 py-2 border-2 transition-all duration-150 select-none flex flex-col items-center min-w-[105px] text-center shadow-xs ${
+          className={`cursor-pointer rounded-lg px-3 py-2 border-2 transition-all duration-150 select-none flex flex-col items-center min-w-[110px] text-center shadow-xs relative ${
+            isHighlighted
+              ? 'ring-4 ring-orange-500 scale-105 z-20'
+              : ''
+          } ${
             node.id === 0
               ? 'bg-white border-slate-400 text-slate-900 font-bold'
               : node.isTerminal
@@ -163,6 +172,16 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
             )}
           </div>
 
+          {/* Full Symbol Name for Leaf Nodes */}
+          {node.isTerminal && node.symbolName && (
+            <div
+              className="mt-1.5 px-2 py-0.5 rounded bg-orange-200 border border-orange-400 text-orange-950 font-black text-[11px] font-mono tracking-tight shadow-2xs max-w-[130px] truncate"
+              title={`Full identifier: ${node.symbolName}`}
+            >
+              {node.symbolName}
+            </div>
+          )}
+
           {node.symbolType && (
             <span className="text-[10px] text-teal-900 font-mono font-bold mt-0.5">
               {node.symbolType}
@@ -173,24 +192,42 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
         {/* Children Branches */}
         {node.children.length > 0 && (
           <div className="flex flex-col items-center w-full">
-            <div className="w-0.5 h-6 bg-slate-400" />
-            <div className="relative flex justify-center gap-4 sm:gap-6 pt-0">
-              {node.children.length > 1 && (
-                <div
-                  className="absolute top-0 h-0.5 bg-slate-400"
-                  style={{
-                    left: `calc(100% / ${node.children.length * 2})`,
-                    right: `calc(100% / ${node.children.length * 2})`,
-                  }}
-                />
-              )}
+            {/* Vertical stem down from parent */}
+            <div className="w-0.5 h-5 bg-slate-400" />
 
-              {node.children.map((child) => (
-                <div key={child.id} className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-slate-400" />
-                  {renderTrieBranch(child, depth + 1)}
-                </div>
-              ))}
+            {/* Horizontal branch structure */}
+            <div className="flex justify-center items-start pt-0">
+              {node.children.map((child, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === node.children.length - 1;
+                const isOnly = node.children.length === 1;
+
+                return (
+                  <div
+                    key={child.id}
+                    className="relative flex flex-col items-center px-2 sm:px-3"
+                  >
+                    {/* Continuous horizontal connecting bar to siblings */}
+                    {!isOnly && (
+                      <div
+                        className={`absolute top-0 h-0.5 bg-slate-400 ${
+                          isFirst
+                            ? 'left-1/2 right-0'
+                            : isLast
+                            ? 'left-0 right-1/2'
+                            : 'left-0 right-0'
+                        }`}
+                      />
+                    )}
+
+                    {/* Vertical stem down into child node */}
+                    <div className="w-0.5 h-5 bg-slate-400 relative z-10" />
+
+                    {/* Recursive branch */}
+                    {renderTrieBranch(child, depth + 1)}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -221,35 +258,52 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
           </p>
         </div>
 
-        {/* Quick Zoom & Reset Controls */}
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.15))}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-mono font-bold text-slate-900 min-w-[44px] text-center">
-            {Math.round(zoomLevel * 100)}%
-          </span>
-          <button
-            type="button"
-            onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.15))}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoomLevel(1)}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
-            title="Reset Zoom"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+        {/* Quick Search & Zoom Controls */}
+        <div className="flex items-center flex-wrap gap-2">
+          {/* Node Search Box */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Find node / symbol..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs bg-white border-2 border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-700 font-medium w-40 sm:w-48"
+            />
+          </div>
+
+          <div className="flex items-center space-x-1.5">
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.15))}
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-mono font-bold text-slate-900 min-w-[40px] text-center">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.15))}
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setZoomLevel(1);
+                setSearchQuery('');
+              }}
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
+              title="Reset View"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -279,7 +333,7 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
       {/* Node Inspector Drawer if selected */}
       {selectedNode && (
         <div className="px-4 py-2.5 bg-teal-50 border-b-2 border-teal-300 flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-3.5 font-medium">
+          <div className="flex items-center space-x-3.5 font-medium flex-wrap gap-y-1">
             <span className="font-bold text-teal-950">
               Selected Edge: <code className="bg-white border-2 border-teal-300 px-2 py-0.5 rounded text-teal-950 font-black">"{selectedNode.edgeLabel}"</code>
             </span>
@@ -296,7 +350,7 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
           <button
             type="button"
             onClick={() => setSelectedNode(null)}
-            className="text-xs text-teal-900 hover:text-black underline font-bold"
+            className="text-xs text-teal-900 hover:text-black underline font-bold ml-2"
           >
             Close
           </button>
@@ -304,9 +358,9 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
       )}
 
       {/* Graph Canvas */}
-      <div className="p-8 overflow-x-auto min-h-[460px] max-h-[580px] bg-slate-50/50 flex justify-center items-start">
+      <div className="p-6 sm:p-8 overflow-x-auto min-h-[480px] max-h-[640px] bg-slate-50/50">
         <div
-          className="transition-transform duration-150 origin-top flex justify-center pb-8"
+          className="transition-transform duration-150 origin-top flex justify-center min-w-max pb-8 mx-auto"
           style={{ transform: `scale(${zoomLevel})` }}
         >
           {renderTrieBranch(root)}
