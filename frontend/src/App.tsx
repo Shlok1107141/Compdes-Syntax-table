@@ -91,7 +91,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-teal-100 selection:text-teal-900">
       {/* Navigation Header */}
       <Navbar
         mode={mode}
@@ -126,13 +126,14 @@ export function App() {
           {/* Right Column: Analysis Tabs & Results (7 cols on lg) */}
           <div className="lg:col-span-7 space-y-4">
             {/* View Selector Tabs */}
-            <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+            <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
               <button
+                type="button"
                 onClick={() => setActiveTab('metrics')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
                   activeTab === 'metrics'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
@@ -140,11 +141,12 @@ export function App() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('symbols')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
                   activeTab === 'symbols'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Hash className="w-4 h-4" />
@@ -159,23 +161,24 @@ export function App() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTab('trie')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
                   activeTab === 'trie'
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Network className="w-4 h-4" />
                 <span>Radix Trie Visualizer</span>
-                <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-bold uppercase">
-                  Showcase
+                <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-orange-100 text-orange-800 font-bold uppercase border border-orange-200">
+                  Demo
                 </span>
               </button>
             </div>
 
             {/* Tab Views */}
-            <div className="transition-all duration-300">
+            <div className="transition-all duration-200">
               {activeTab === 'metrics' && (
                 <MetricsDashboard data={analysisData} />
               )}
@@ -193,15 +196,15 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950 py-4 mt-8 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-4 mt-8 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-2">
           <span>
             BCSE307L Compiler Design &bull; Sprint Webapp &bull; Frontend by <strong>Sagnik Datta</strong>
           </span>
-          <div className="flex items-center space-x-3 text-slate-400 font-mono text-[11px]">
+          <div className="flex items-center space-x-3 text-slate-500 font-mono text-[11px]">
             <span>Contract: POST /analyze</span>
             <span>&bull;</span>
-            <span>Status: Sanitizer-Verified</span>
+            <span>Architecture: Trie + 16b Arena + Bitpack</span>
           </div>
         </div>
       </footer>
