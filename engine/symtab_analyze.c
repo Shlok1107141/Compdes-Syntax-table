@@ -287,6 +287,65 @@ static void lex(void) {
     push_token(TK_EOF, src_len, 0);
 }
 
+/* GNU/MSVC extensions that preprocessed system headers are full of. They
+ * annotate declarations but name nothing, so they are removed before
+ * parsing: qualifiers on their own, attribute-like forms together with
+ * their parenthesised argument. Without this, `__restrict__` and friends
+ * would be recorded as symbols. */
+static const char *EXTENSION_QUALIFIERS[] = {
+    "__restrict", "__restrict__", "__inline", "__inline__", "__forceinline",
+    "__volatile", "__volatile__", "__const", "__const__", "__signed__", "__extension__",
+    "__cdecl", "_cdecl", "__stdcall", "__fastcall", "__thiscall", "__vectorcall",
+    "__thread", "_Thread_local", "__unaligned", "__ptr32", "__ptr64", "__w64"
+};
+static const char *EXTENSION_WITH_ARGS[] = {
+    "__attribute__", "__attribute", "__declspec", "__asm__", "__asm", "asm",
+    "_Alignas", "alignas", "_Static_assert", "static_assert"
+};
+
+static int token_text_is(const Token *t, const char *s) {
+    size_t n = strlen(s);
+    return t->kind == TK_IDENT && t->len == n && memcmp(src + t->pos, s, n) == 0;
+}
+
+static int token_in(const Token *t, const char *const *list, size_t count) {
+    for (size_t k = 0; k < count; k++)
+        if (token_text_is(t, list[k])) return 1;
+    return 0;
+}
+
+static int token_is_punct(const Token *t, char c) {
+    return t->kind == TK_PUNCT && src[t->pos] == c;
+}
+
+static void strip_extensions(void) {
+    size_t out = 0, i = 0;
+    while (i < ntok) {
+        const Token *t = &toks[i];
+        if (token_in(t, EXTENSION_QUALIFIERS, sizeof EXTENSION_QUALIFIERS / sizeof *EXTENSION_QUALIFIERS)) {
+            i++;
+            continue;
+        }
+        if (token_in(t, EXTENSION_WITH_ARGS, sizeof EXTENSION_WITH_ARGS / sizeof *EXTENSION_WITH_ARGS)) {
+            i++;
+            /* `__asm__ __volatile__ (...)`: qualifiers may sit before the group */
+            while (i < ntok && token_in(&toks[i], EXTENSION_QUALIFIERS,
+                                        sizeof EXTENSION_QUALIFIERS / sizeof *EXTENSION_QUALIFIERS)) i++;
+            if (i < ntok && token_is_punct(&toks[i], '(')) {
+                int depth = 0;
+                do {
+                    if (token_is_punct(&toks[i], '(')) depth++;
+                    else if (token_is_punct(&toks[i], ')')) depth--;
+                    i++;
+                } while (i < ntok && depth > 0 && toks[i].kind != TK_EOF);
+            }
+            continue;
+        }
+        toks[out++] = toks[i++];
+    }
+    ntok = out;
+}
+
 /* ============================================================
  * Token helpers
  * ============================================================ */
@@ -366,7 +425,11 @@ static const NamedType BUILTIN_TYPEDEFS[] = {
     {"uint8_t", T_CHAR, 1},  {"int8_t", T_CHAR, 1},   {"uint16_t", T_SHORT, 2},
     {"int16_t", T_SHORT, 2}, {"uint32_t", T_INT, 4},  {"int32_t", T_INT, 4},
     {"uint64_t", T_LONG, 8}, {"int64_t", T_LONG, 8},  {"bool", T_BOOL, 1},
-    {"FILE", T_STRUCT, 0},   {"va_list", T_POINTER, 8}
+    {"FILE", T_STRUCT, 0},   {"va_list", T_POINTER, 8},
+    /* compiler builtins that show up in preprocessed system headers */
+    {"__builtin_va_list", T_POINTER, 8}, {"__int128", T_LONG, 16},
+    {"_Float32", T_FLOAT, 4}, {"_Float64", T_DOUBLE, 8}, {"_Float128", T_DOUBLE, 16},
+    {"__float128", T_DOUBLE, 16}
 };
 #define NUM_BUILTIN_TYPEDEFS (sizeof(BUILTIN_TYPEDEFS) / sizeof(BUILTIN_TYPEDEFS[0]))
 
@@ -1262,9 +1325,11 @@ static void print_json(const size_t totals[NUM_VARIANTS], const Peak *peak) {
         if (i) putchar(',');
         printf("{\"name\":\"");
         json_escape(d->name, strlen(d->name));
-        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,\"references\":%u}",
+        printf("\",\"type\":\"%s\",\"scope\":%u,\"storage_class\":\"%s\",\"offset\":%u,"
+               "\"references\":%u,\"packed\":%lu}",
                TYPE_NAMES[d->type & 0xF], (unsigned)d->scope,
-               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i]);
+               STORAGE_NAMES[d->storage_class & 0xF], (unsigned)d->offset, (unsigned)references[i],
+               (unsigned long)pack_symbol(&symbols[i]));
     }
     printf("],");
 
@@ -1332,6 +1397,7 @@ int main(void) {
 
     read_stdin();
     lex();
+    strip_extensions();
     parse_translation_unit();
 
     for (size_t i = 0; i < ndecl; i++) {

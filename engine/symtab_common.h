@@ -101,8 +101,10 @@ static inline int fields_match(int type, int scope, int sc, int off, const TestS
 /* ---------- allocation accounting ----------
  * Each live malloc costs (requested bytes + MALLOC_OVERHEAD), identical to the
  * original prototype's model. Frees are tracked so that variants which
- * free/reallocate (trie edge splits) are charged only for what is live. */
-#define MALLOC_OVERHEAD 16
+ * free/reallocate (trie edge splits) are charged only for what is live.
+ * The overhead is two machine words of chunk header, as in glibc: 16 B on a
+ * 64-bit host (the prototype's figure), 8 B when built with -m32. */
+#define MALLOC_OVERHEAD (2 * sizeof(void *))
 #define HASH_BUCKETS    64
 
 typedef struct { size_t payload; size_t allocs; } Tracker;

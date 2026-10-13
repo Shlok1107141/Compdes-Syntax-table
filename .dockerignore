@@ -1,0 +1,9 @@
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+frontend
+engine/symtab_analyze
+engine/*.exe
+engine/*_san

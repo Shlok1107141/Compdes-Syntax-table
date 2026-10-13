@@ -1,0 +1,37 @@
+[
+  {
+    "id": "embedded-prototype-30",
+    "name": "Embedded Sensor Subsystem (Prototype's 30 names)",
+    "badge": "Review 0 workload",
+    "description": "The 30 identifiers from engine/symtab_demo.c, written as a small embedded C file.",
+    "code": "/* Embedded Sensor Node Firmware - BCSE307L Benchmark */\nint counter;\nint counter_max;\nint counter_min;\nchar temp;\nchar temp_max;\nchar temp_min;\nint* temp_buffer;\n\nint sensor_id;\nint sensor_value;\nint led_pin;\nint led_state;\nchar* buffer;\nint buffer_size;\nchar* buffer_ptr;\n\nint status;\nint status_flag;\nint status_code;\nstruct Config config;\nint config_flag;\n\nvoid counter_reset(void) {\n    int count;\n    int count_all;\n}\n\nvoid sensor_read(void) {\n    static int init_flag;\n}\n\nvoid sensor_write(void) {}\nvoid led_toggle(void) {}\n\nvoid handler(void) {\n    static int handler_id;\n}\n\nvoid init(void) {}\n\nint main(void) {\n    return 0;\n}\n"
+  },
+  {
+    "id": "uart-driver-locals",
+    "name": "UART Driver (Functions Reuse Locals)",
+    "badge": "Redeclared locals",
+    "description": "Every function declares i, count and tmp again. A trie stores each repeated name once; hash tables copy it per declaration.",
+    "code": "/* UART driver: every function reuses the same local names */\n#define RX_LEN 64\n\nchar uart_rx_buf[RX_LEN];\nint  uart_rx_head;\nint  uart_rx_tail;\nint  uart_baud;\nint  uart_errors;\n\nint uart_read(char *out, int len) {\n    int i;\n    int count = 0;\n    for (i = 0; i < len; i++) {\n        if (uart_rx_head == uart_rx_tail) break;\n        out[i] = uart_rx_buf[uart_rx_tail];\n        uart_rx_tail = (uart_rx_tail + 1) % RX_LEN;\n        count++;\n    }\n    return count;\n}\n\nint uart_write(const char *data, int len) {\n    int i;\n    int count = 0;\n    for (i = 0; i < len; i++) {\n        int tmp = data[i];\n        count = count + (tmp != 0);\n    }\n    return count;\n}\n\nint uart_flush(void) {\n    int count = 0;\n    while (uart_rx_head != uart_rx_tail) {\n        int tmp = uart_rx_tail;\n        uart_rx_tail = (tmp + 1) % RX_LEN;\n        count++;\n    }\n    return count;\n}\n\nvoid uart_init(int baud) {\n    int i;\n    for (i = 0; i < RX_LEN; i++) {\n        uart_rx_buf[i] = 0;\n    }\n    uart_baud = baud;\n    uart_errors = 0;\n}\n"
+  },
+  {
+    "id": "can-bus-controller",
+    "name": "CAN Bus & Motor Subsystem (High Redundancy)",
+    "badge": "Heavy prefix sharing",
+    "description": "Heavily partitioned embedded device with repeated subsystem prefixes (can_*, motor_*, telemetry_*).",
+    "code": "/* CAN 2.0B Controller & Dual Stepper Subsystem */\nint can_rx_buf_head;\nint can_rx_buf_tail;\nint can_rx_filter_id;\nint can_rx_mask;\nint can_tx_buf_head;\nint can_tx_buf_tail;\nint can_tx_priority;\nint can_status_bus_off;\nint can_status_err_warn;\n\nint motor_stepper_pos_actual;\nint motor_stepper_pos_target;\nint motor_stepper_vel_max;\nint motor_stepper_accel_rate;\nint motor_pwm_duty_cycle;\nint motor_pwm_freq_hz;\nint motor_driver_fault;\n\nint telemetry_packet_count;\nint telemetry_packet_crc;\nint telemetry_tx_rate_hz;\n\nvoid can_init_registers(int baud_prescaler) {\n    int can_reg_btr0;\n    int can_reg_btr1;\n    int can_reg_ocr;\n}\n\nvoid motor_update_pid(void) {\n    int motor_pid_error_p;\n    int motor_pid_error_i;\n    int motor_pid_error_d;\n}\n"
+  },
+  {
+    "id": "nested-scopes-c",
+    "name": "Lexical Scoping & Shadowing",
+    "badge": "Shadowing & scopes",
+    "description": "Nested blocks, a for-loop scope, parameters and a shadowed global: watch how each use resolves.",
+    "code": "/* Multi-tier Scope Tracking */\nint global_system_state;\nint global_error_counter;\nint sample_rate;\n\nint compute_metrics(int input_factor, int sample_rate) {\n    int local_accumulator = 0;\n    int local_threshold = input_factor * sample_rate;\n\n    for (int loop_i = 0; loop_i < 100; loop_i++) {\n        int block_sample = loop_i * input_factor;\n        if (block_sample > local_threshold) {\n            int local_threshold = block_sample / 2;\n            local_accumulator += local_threshold;\n        }\n    }\n\n    global_error_counter = global_error_counter + 1;\n    return local_accumulator;\n}\n"
+  },
+  {
+    "id": "random-worst-case",
+    "name": "Disjoint Identifiers (Worst-Case)",
+    "badge": "Worst case for the trie",
+    "description": "Identifiers with unique initial characters: almost no prefix to share, so the trie's node cost is not repaid.",
+    "code": "/* Disjoint Identifier Stress Set */\nint alpha;\nint beta;\nint gamma;\nint delta;\nint epsilon;\nint zeta;\nint eta;\nint theta;\nint iota;\nint kappa;\nint lambda;\nint mu;\nint nu;\nint xi;\nint omicron;\nint pi;\nint rho;\nint sigma;\nint tau;\nint upsilon;\nint phi;\nint chi;\nint psi;\nint omega;\n"
+  }
+]

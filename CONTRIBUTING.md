@@ -37,16 +37,16 @@ Every component must be validated locally before submitting changes.
 > [!IMPORTANT]
 > **Mandatory Sanitizer Verification**: All C engine code and ablation variants MUST compile cleanly with AddressSanitizer and UndefinedBehaviorSanitizer enabled. **Unverified benchmarks or crashing builds will not be accepted.**
 
-Run:
+Run (on Linux or WSL — MinGW has no sanitizer runtime):
 ```bash
 cd engine
-gcc symtab_demo.c -o symtab_demo -fsanitize=address,undefined -Wall -Wextra
-./symtab_demo
-
-gcc symtab_stress.c -o symtab_stress -fsanitize=address,undefined -Wall -Wextra
-./symtab_stress
+make check                                   # analyzer + all variants under ASan/UBSan
+gcc -std=c11 -fsanitize=address,undefined -Wall -Wextra symtab_demo.c -o symtab_demo && ./symtab_demo
+make sweep                                   # regenerate results.csv if a variant's layout changed
 ```
 - No memory leaks, out-of-bounds reads/writes, or undefined behavior warnings are permitted.
+- A change that moves any measured number must regenerate the data file it affects (`results.csv`, `bench_results.csv`, `real_corpus.csv`, `frontend/src/data/sampleResults.json`); backend tests fail when `results.csv` or the sample results are stale.
+- **Never hand-write a figure.** Every number in a document must come from a script in `engine/`.
 
 ### 2. Backend Testing Standard (`backend/`)
 
@@ -92,7 +92,9 @@ All frontend and backend integrations must adhere strictly to the Day 1 locked J
         "type": "<str>",
         "scope": <int>,
         "storage_class": "<str>",
-        "offset": <int>
+        "offset": <int>,
+        "references": <int>,
+        "packed": <int>
       }
     ],
     "ablation": {
@@ -102,9 +104,11 @@ All frontend and backend integrations must adhere strictly to the Day 1 locked J
       "trie_arena": <int>,
       "trie_bitpack": <int>,
       "arena_bitpack": <int>
-    }
+    },
+    "peak": { "baseline_bytes": <int>, "compressed_bytes": <int>, "savings_pct": <float>, "live_symbols": <int> }
   }
   ```
+  `references`, `packed` and `peak` are additive; the original fields never change.
 
 ---
 

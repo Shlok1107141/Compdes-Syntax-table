@@ -69,6 +69,11 @@ class Symbol(BaseModel):
         description="Uses of this declaration, resolved through the compressed table's "
                     "scoped lookup (additive to the locked contract).",
     )
+    packed: int = Field(
+        0,
+        description="The 32-bit metadata word the compressed table stores: "
+                    "type(4) | scope(8) | storage_class(4) | offset(16), high bits first.",
+    )
 
 
 class Ablation(BaseModel):
@@ -108,8 +113,18 @@ class AnalyzeResponse(BaseModel):
 
 _hits: dict[str, deque[float]] = defaultdict(deque)
 
+# Behind the bundled nginx (docker-compose) every request arrives from the
+# proxy's address, so per-client limits would collapse into one shared bucket.
+# nginx overwrites X-Real-IP with the real peer address, so the header is
+# trusted only when this flag says a proxy we control is in front.
+TRUST_PROXY_HEADERS = os.environ.get("SYMTAB_TRUST_PROXY_HEADERS") == "1"
+
 
 def _client_key(request: Request) -> str:
+    if TRUST_PROXY_HEADERS:
+        real_ip = request.headers.get("x-real-ip", "").strip()
+        if real_ip:
+            return real_ip
     return request.client.host if request.client else "unknown"
 
 

@@ -32,7 +32,7 @@ def test_declarations_get_type_scope_and_storage(run_engine):
     assert syms["counter_max"][0] == {
         "name": "counter_max", "type": "int", "scope": 0,
         "storage_class": "global", "offset": syms["counter_max"][0]["offset"],
-        "references": 0,
+        "references": 0, "packed": syms["counter_max"][0]["packed"],
     }
     assert syms["counter"][0]["storage_class"] == "static"
     assert syms["temp_buffer"][0]["type"] == "array"
@@ -41,6 +41,19 @@ def test_declarations_get_type_scope_and_storage(run_engine):
     assert syms["call_count"][0]["storage_class"] == "static"
     assert syms["sensor_name"][0]["storage_class"] == "member"
     assert syms["main"][0]["type"] == "function"
+
+
+def test_packed_word_matches_the_documented_bit_layout(run_engine):
+    """type(4) | scope(8) | storage_class(4) | offset(16), high bits first."""
+    _, payload, _ = run_engine("int pad; char buf[10]; void f(void) { static long tally; }")
+    type_codes = {"int": 0, "char": 1, "long": 3, "array": 8, "function": 12}
+    storage_codes = {"local": 0, "global": 1, "static": 2}
+    for sym in payload["symbol_table"]:
+        word = sym["packed"]
+        assert word >> 28 == type_codes[sym["type"]], sym
+        assert (word >> 20) & 0xFF == sym["scope"], sym
+        assert (word >> 16) & 0xF == storage_codes[sym["storage_class"]], sym
+        assert word & 0xFFFF == sym["offset"], sym
 
 
 def test_scope_depth_tracks_nesting(run_engine):
@@ -242,6 +255,24 @@ def test_struct_members_live_as_long_as_their_struct(run_engine):
     _, payload, _ = run_engine(source)
     # point's members stay alive through both functions: x, y, f, local (then g, other).
     assert payload["peak"]["live_symbols"] == 5
+
+
+def test_compiler_extensions_are_not_symbols(run_engine):
+    """Preprocessed system headers are full of GNU/MSVC annotations; they name nothing."""
+    source = """
+    extern int printf(const char *__restrict__ fmt, ...) __attribute__((__format__(printf, 1, 2)));
+    __extension__ typedef long long big_t;
+    static __inline__ int twice(int v) { return v * 2; }
+    __declspec(dllimport) void imported(void);
+    int counter __asm__("real_counter");
+    void spin(void) { __asm__ __volatile__ ("nop"); }
+    """
+    code, payload, _ = run_engine(source)
+    assert code == 0, payload
+    names = [s["name"] for s in payload["symbol_table"]]
+    assert not [n for n in names if n.startswith("__")], names
+    for expected in ("printf", "big_t", "twice", "imported", "counter", "spin"):
+        assert expected in names
 
 
 def test_savings_percentage_matches_the_byte_counts(run_engine):

@@ -25,18 +25,28 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
   const uniqueStorageClasses = Array.from(new Set(symbols.map((s) => s.storage_class)));
   const uniqueScopes = Array.from(new Set(symbols.map((s) => s.scope))).sort((a, b) => a - b);
 
-  // Compute 32-bit packed word representation:
-  // [type: 4 bits] [scope: 8 bits] [storage_class: 4 bits] [offset: 16 bits]
-  const computeBitpackedWord = (sym: SymbolEntry): { hex: string; binary: string } => {
-    const typeCode = sym.type.includes('*') ? 2 : sym.type.includes('()') ? 3 : sym.type === 'char' ? 1 : 0;
-    const storageCode = sym.storage_class === 'global' ? 1 : sym.storage_class === 'static' ? 2 : sym.storage_class === 'param' ? 3 : 0;
-    const scopeCode = sym.scope & 0xff;
-    const offsetCode = sym.offset & 0xffff;
-
-    // Packed 32-bit uint: (offset << 16) | (storage << 12) | (scope << 4) | type
-    const word = ((offsetCode << 16) | (storageCode << 12) | (scopeCode << 4) | (typeCode & 0xf)) >>> 0;
-    const hex = '0x' + word.toString(16).toUpperCase().padStart(8, '0');
-    return { hex, binary: word.toString(2).padStart(32, '0') };
+  // The exact word the compressed table stores (from the engine):
+  // [type: 4 bits][scope: 8 bits][storage_class: 4 bits][offset: 16 bits], high bits first.
+  const describePackedWord = (sym: SymbolEntry): { hex: string; fields: string } => {
+    let word = sym.packed;
+    if (word === undefined) {
+      // Compute fallback packed word if missing from backend
+      const typeCode = sym.type.includes('*') ? 2 : sym.type.includes('()') ? 3 : sym.type === 'char' ? 1 : 0;
+      const storageCode = sym.storage_class === 'global' ? 1 : sym.storage_class === 'static' ? 2 : sym.storage_class === 'param' ? 3 : 0;
+      const scopeCode = sym.scope & 0xff;
+      const offsetCode = sym.offset & 0xffff;
+      word = ((typeCode & 0xf) << 28) | ((scopeCode & 0xff) << 20) | ((storageCode & 0xf) << 16) | (offsetCode & 0xffff);
+    }
+    const unsignedWord = word >>> 0;
+    const bits = unsignedWord.toString(2).padStart(32, '0');
+    return {
+      hex: '0x' + unsignedWord.toString(16).toUpperCase().padStart(8, '0'),
+      fields:
+        `type ${bits.slice(0, 4)} (${unsignedWord >>> 28})\n` +
+        `scope ${bits.slice(4, 12)} (${(unsignedWord >>> 20) & 0xff})\n` +
+        `storage ${bits.slice(12, 16)} (${(unsignedWord >>> 16) & 0xf})\n` +
+        `offset ${bits.slice(16)} (${unsignedWord & 0xffff})`,
+    };
   };
 
   const exportToJson = () => {
@@ -134,19 +144,20 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
               <th className="py-2.5 px-4">Scope</th>
               <th className="py-2.5 px-4">Storage Class</th>
               <th className="py-2.5 px-4">Offset</th>
+              <th className="py-2.5 px-4" title="Uses resolved to this declaration by scoped lookup">Refs</th>
               <th className="py-2.5 px-4 text-right">Bit-Packed 32b Word</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-mono">
             {filteredSymbols.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400 font-sans">
+                <td colSpan={7} className="py-8 text-center text-slate-400 font-sans">
                   No matching symbols found.
                 </td>
               </tr>
             ) : (
               filteredSymbols.map((sym, idx) => {
-                const packed = computeBitpackedWord(sym);
+                const packed = describePackedWord(sym);
                 return (
                   <tr
                     key={`${sym.name}-${sym.scope}-${idx}`}
@@ -181,10 +192,13 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
                     <td className="py-2.5 px-4 text-slate-600">
                       +{sym.offset} B
                     </td>
+                    <td className={`py-2.5 px-4 ${sym.references ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
+                      {sym.references ?? '—'}
+                    </td>
                     <td className="py-2.5 px-4 text-right">
                       <span
                         className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-slate-50 text-slate-800 border border-slate-200 text-[11px] shadow-2xs"
-                        title={`32-bit packed word:\nOffset: 16b\nClass: 4b\nScope: 8b\nType: 4b\nBinary: ${packed.binary}`}
+                        title={`Stored 32-bit word:\n${packed.fields}`}
                       >
                         <Binary className="w-3 h-3 text-teal-600" />
                         <span>{packed.hex}</span>
@@ -203,7 +217,7 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
         <span>
           💡 <span className="font-semibold text-slate-800">Bit-Packing Scheme:</span> [Type: 4b] [Scope: 8b] [Class: 4b] [Offset: 16b] = Single 32-bit word.
         </span>
-        <span className="text-slate-500 font-mono">Replaces 16-24 bytes of standard struct padding.</span>
+        <span className="text-slate-500 font-mono">Replaces four unpacked ints (16 bytes). Hover a word to decode it.</span>
       </div>
     </div>
   );

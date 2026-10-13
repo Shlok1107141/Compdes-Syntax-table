@@ -58,6 +58,18 @@ Errors are `{"detail": "..."}` with these statuses:
 
 ## Running it
 
+Everything (engine + backend + UI) in containers:
+
+```bash
+docker compose up --build        # then open http://localhost:8080
+```
+
+The backend container runs as an unprivileged user on a read-only filesystem
+with no Linux capabilities, a 512 MiB / 1 CPU / 64-process limit, and no route
+to the internet (only nginx can reach it). See `docker-compose.yml`.
+
+Without Docker, for development:
+
 ```bash
 make -C engine symtab_analyze        # links the analyzer with every variant_*.c
 pip install -r backend/requirements.txt

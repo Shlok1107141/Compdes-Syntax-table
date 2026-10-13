@@ -20,22 +20,28 @@ To protect the host environment while parsing arbitrary input, the following def
 - The engine operates purely as a read-only scanner of the provided character buffer.
 
 ### 2. Subprocess Resource Limits & Sandboxing
-When invoking the native C engine from the Python backend:
-- **Execution Timeout**: Subprocesses are terminated with `SIGKILL` if execution exceeds a strict threshold (e.g., maximum 2.0 seconds) to prevent infinite loops, algorithmic complexity attacks, or catastrophic backtracking.
-- **Memory Ceiling**: Subprocesses are bounded by strict memory caps (e.g., `setrlimit` on POSIX or job object limits on Windows) to prevent exhaustion of host RAM.
-- **Unprivileged Execution**: The native binary runs with dropped privileges without filesystem write access or network access.
+When invoking the native C engine from the Python backend ([`backend/engine.py`](backend/engine.py)):
+- **Execution Timeout**: the child is killed if it runs longer than 5 seconds (`SYMTAB_ENGINE_TIMEOUT`), returned to the client as `504`.
+- **Memory and CPU Ceiling**: on POSIX the engine caps its own address space (256 MiB) and CPU time (5 s) with `setrlimit` before reading any input. (No equivalent is applied on Windows; deploy with Docker.)
+- **Minimal Process Surface**: no shell, an argument vector only, a scrubbed environment, an empty temporary working directory, and a cap on output size.
+- **Bounded Concurrency**: at most 4 engine processes run at once (`SYMTAB_MAX_CONCURRENCY`).
+- **Container Isolation** ([`docker-compose.yml`](docker-compose.yml)): the backend runs as an unprivileged user on a read-only filesystem, with all Linux capabilities dropped, `no-new-privileges`, 512 MiB / 1 CPU / 64-process limits, and no network route except from the nginx front end.
 
 ### 3. Strict Input Size Caps
-- The HTTP endpoint (`POST /analyze`) enforces a hard maximum payload limit (e.g., 64 KB).
-- Requests exceeding this limit are rejected at the FastAPI / reverse proxy layer with `413 Payload Too Large` before ever being passed to the native binary.
+- `POST /analyze` rejects source larger than 64 KiB with `413 Payload Too Large` before the engine is started; nginx caps the whole request body at 512 KiB.
+- The engine independently refuses input over 1 MiB, identifiers over 255 characters, more than 8,192 declarations, and anything past its 16-bit arena limits — each as a JSON error (`400`), never a crash.
 
 ### 4. Memory Safety & Sanitizer Verification
 - All C source code in [`engine/`](engine/) is compiled with AddressSanitizer (`-fsanitize=address`) and UndefinedBehaviorSanitizer (`-fsanitize=undefined`) during development and CI.
 - The trie and arena implementations enforce explicit bounds checking on array indices to guard against buffer overflows or out-of-bounds arena accesses.
 
 ### 5. Network & API Boundary Protection
-- **CORS Lockdown**: Cross-Origin Resource Sharing (CORS) middleware is restricted to designated frontend origins in production to prevent arbitrary third-party website abuse.
-- **Rate Limiting**: The `/analyze` endpoint enforces per-IP request rate limits to mitigate Denial of Service (DoS) attempts against the parsing subprocesses.
+- **CORS Lockdown**: only origins listed in `SYMTAB_ALLOWED_ORIGINS` are allowed; credentials are never allowed.
+- **Rate Limiting**: 30 requests per minute per client (`SYMTAB_RATE_LIMIT`). Behind the bundled nginx the client is identified by `X-Real-IP`, which nginx overwrites; the header is ignored unless `SYMTAB_TRUST_PROXY_HEADERS=1`, so clients cannot spoof it.
+
+### 6. Continuous Verification
+- 108 hostile inputs ([`backend/tests/hostile_inputs.py`](backend/tests/hostile_inputs.py)) run against a sanitizer build on every pull request.
+- [`backend/scripts/adversarial_e2e.py`](backend/scripts/adversarial_e2e.py) attacks the running Docker stack through nginx in CI: malformed and oversized requests, hostile source, 50 concurrent requests and a request flood. Every request must get a deliberate answer (never a 5xx) and the service must stay healthy.
 
 ---
 

@@ -44,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
               title={
                 isBackendAvailable
                   ? 'Connected to FastAPI backend with C engine ready'
-                  : 'Backend server not responding at http://localhost:8000'
+                  : 'Backend not responding (start it with docker compose up or uvicorn on port 8000)'
               }
             >
               <span
@@ -60,16 +60,16 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
           <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1 text-xs">
             <button
               type="button"
-              onClick={() => onToggleMode('mock')}
+              onClick={() => onToggleMode('offline')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
-                mode === 'mock'
+                mode === 'offline'
                   ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="Runs instant client-side simulation based on engine/symtab_demo.c"
+              title="No backend needed: the C engine's precomputed results for the built-in samples"
             >
-              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              <span>Simulated Mode</span>
+              <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+              <span>Offline Samples</span>
             </button>
             <button
               type="button"
@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
                   ? 'bg-teal-700 text-white font-semibold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="Connects to FastAPI backend at http://localhost:8000/analyze"
+              title="Runs the C engine on the code in the editor via POST /analyze"
             >
               <Radio className="w-3.5 h-3.5" />
               <span>Live Backend</span>

@@ -23,6 +23,11 @@ run: all
 sweep:
 	./run_sweep.sh
 
+# Speed of the eight structures (insert / lookup hit / lookup miss, ns per op).
+bench: symtab_bench.c symtab_common.h symtab_workloads.h $(addsuffix .c,$(ALL))
+	$(CC) $(CFLAGS) -DSYMTAB_NO_MAIN -o symtab_bench symtab_bench.c $(addsuffix .c,$(ALL))
+	./symtab_bench | tee bench_results.csv
+
 # Testing standard: verify under sanitizers, then measure.
 check:
 	$(CC) $(SANFLAGS) -DSYMTAB_NO_MAIN -o symtab_analyze_san $(ANALYZE_SRCS)
@@ -30,6 +35,6 @@ check:
 	@echo "sanitizer check: clean"
 
 clean:
-	rm -f $(ALL) symtab_analyze symtab_analyze_san
+	rm -f $(ALL) symtab_analyze symtab_analyze_san symtab_bench
 
-.PHONY: all run sweep check clean
+.PHONY: all run sweep bench check clean

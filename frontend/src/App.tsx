@@ -7,21 +7,23 @@ import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
-import { analyzeCode, analyzeCodeSimulated, checkBackendHealth } from './services/api';
+import { analyzeCode, checkBackendHealth, offlineResultFor } from './services/api';
 import type { AnalyzeResponse, ExecutionMode } from './types';
 import { BarChart3, Hash, Network } from 'lucide-react';
 
 export function App() {
   const [code, setCode] = useState<string>(SAMPLE_PRESETS[0].code);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(SAMPLE_PRESETS[0].id);
-  const [mode, setMode] = useState<ExecutionMode>('mock');
+  // Start offline (the engine's precomputed sample results); switch to live
+  // as soon as the backend reports the engine is ready.
+  const [mode, setMode] = useState<ExecutionMode>('offline');
   const [isBackendAvailable, setIsBackendAvailable] = useState<boolean | null>(null);
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'symbols' | 'trie'>('metrics');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalyzeResponse | null>(() =>
-    analyzeCodeSimulated(SAMPLE_PRESETS[0].code)
+    offlineResultFor(SAMPLE_PRESETS[0].code)
   );
 
   // Trigger analysis
@@ -51,7 +53,11 @@ export function App() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error during analysis.';
         setError(msg);
-        if (targetMode === 'live') {
+        // Only a failed connection means the engine is down; a 400/413/429 is the
+        // engine (or its guards) working as intended.
+        const unreachable =
+          msg.includes('Could not connect') || msg.includes('timed out') || msg.includes('HTTP 503');
+        if (targetMode === 'live' && unreachable) {
           setIsBackendAvailable(false);
         }
       } finally {
@@ -66,7 +72,9 @@ export function App() {
     let isMounted = true;
     checkBackendHealth().then((health) => {
       if (isMounted) {
-        setIsBackendAvailable(health.online && Boolean(health.engineReady));
+        const ready = health.online && Boolean(health.engineReady);
+        setIsBackendAvailable(ready);
+        if (ready) setMode('live');
       }
     });
     return () => {
@@ -106,7 +114,7 @@ export function App() {
           error={error}
           onDismiss={() => setError(null)}
           mode={mode}
-          onSwitchToMock={() => handleToggleMode('mock')}
+          onSwitchToOffline={() => handleToggleMode('offline')}
         />
 
         {/* 2-Column Responsive Layout */}
@@ -185,6 +193,13 @@ export function App() {
 
               {activeTab === 'symbols' && (
                 <SymbolTableView symbols={analysisData?.symbol_table || []} />
+              )}
+
+              {mode === 'offline' && analysisData && analysisData === offlineResultFor(code) && (
+                <p className="mt-3 text-[11px] text-slate-500">
+                  Offline mode: these are the C engine's real results for this sample, precomputed by{' '}
+                  <code className="text-slate-400">backend/scripts/build_sample_results.py</code>.
+                </p>
               )}
 
               {activeTab === 'trie' && (

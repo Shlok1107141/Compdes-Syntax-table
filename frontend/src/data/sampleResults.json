@@ -1,0 +1,1142 @@
+{
+  "embedded-prototype-30": {
+    "baseline_bytes": 2725,
+    "compressed_bytes": 669,
+    "savings_pct": 75.45,
+    "symbol_table": [
+      {
+        "name": "counter",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 65536
+      },
+      {
+        "name": "counter_max",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 4,
+        "references": 0,
+        "packed": 65540
+      },
+      {
+        "name": "counter_min",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 8,
+        "references": 0,
+        "packed": 65544
+      },
+      {
+        "name": "temp",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 12,
+        "references": 0,
+        "packed": 268501004
+      },
+      {
+        "name": "temp_max",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 13,
+        "references": 0,
+        "packed": 268501005
+      },
+      {
+        "name": "temp_min",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 14,
+        "references": 0,
+        "packed": 268501006
+      },
+      {
+        "name": "temp_buffer",
+        "type": "pointer",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 16,
+        "references": 0,
+        "packed": 1879113744
+      },
+      {
+        "name": "sensor_id",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 24,
+        "references": 0,
+        "packed": 65560
+      },
+      {
+        "name": "sensor_value",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 28,
+        "references": 0,
+        "packed": 65564
+      },
+      {
+        "name": "led_pin",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 32,
+        "references": 0,
+        "packed": 65568
+      },
+      {
+        "name": "led_state",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 36,
+        "references": 0,
+        "packed": 65572
+      },
+      {
+        "name": "buffer",
+        "type": "pointer",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 40,
+        "references": 0,
+        "packed": 1879113768
+      },
+      {
+        "name": "buffer_size",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 48,
+        "references": 0,
+        "packed": 65584
+      },
+      {
+        "name": "buffer_ptr",
+        "type": "pointer",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 56,
+        "references": 0,
+        "packed": 1879113784
+      },
+      {
+        "name": "status",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 64,
+        "references": 0,
+        "packed": 65600
+      },
+      {
+        "name": "status_flag",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 68,
+        "references": 0,
+        "packed": 65604
+      },
+      {
+        "name": "status_code",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 72,
+        "references": 0,
+        "packed": 65608
+      },
+      {
+        "name": "config",
+        "type": "struct",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 76,
+        "references": 0,
+        "packed": 2415984716
+      },
+      {
+        "name": "config_flag",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 80,
+        "references": 0,
+        "packed": 65616
+      },
+      {
+        "name": "counter_reset",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "count",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 0,
+        "references": 0,
+        "packed": 1048576
+      },
+      {
+        "name": "count_all",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 4,
+        "references": 0,
+        "packed": 1048580
+      },
+      {
+        "name": "sensor_read",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "init_flag",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "static",
+        "offset": 0,
+        "references": 0,
+        "packed": 1179648
+      },
+      {
+        "name": "sensor_write",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "led_toggle",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "handler",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "handler_id",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "static",
+        "offset": 0,
+        "references": 0,
+        "packed": 1179648
+      },
+      {
+        "name": "init",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "main",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 2485,
+      "arena_only": 1021,
+      "trie_only": 4035,
+      "arena_bitpack": 661,
+      "trie_bitpack": 2747,
+      "trie_arena": 1029
+    },
+    "peak": {
+      "baseline_bytes": 2432,
+      "compressed_bytes": 601,
+      "savings_pct": 75.29,
+      "live_symbols": 26
+    }
+  },
+  "uart-driver-locals": {
+    "baseline_bytes": 2076,
+    "compressed_bytes": 381,
+    "savings_pct": 81.65,
+    "symbol_table": [
+      {
+        "name": "uart_rx_buf",
+        "type": "array",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 2,
+        "packed": 2147549184
+      },
+      {
+        "name": "uart_rx_head",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 64,
+        "references": 2,
+        "packed": 65600
+      },
+      {
+        "name": "uart_rx_tail",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 68,
+        "references": 7,
+        "packed": 65604
+      },
+      {
+        "name": "uart_baud",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 72,
+        "references": 1,
+        "packed": 65608
+      },
+      {
+        "name": "uart_errors",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 76,
+        "references": 1,
+        "packed": 65612
+      },
+      {
+        "name": "uart_read",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "out",
+        "type": "pointer",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 0,
+        "references": 1,
+        "packed": 1880293376
+      },
+      {
+        "name": "len",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 8,
+        "references": 1,
+        "packed": 1245192
+      },
+      {
+        "name": "i",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 12,
+        "references": 4,
+        "packed": 1048588
+      },
+      {
+        "name": "count",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 16,
+        "references": 2,
+        "packed": 1048592
+      },
+      {
+        "name": "uart_write",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "data",
+        "type": "pointer",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 0,
+        "references": 1,
+        "packed": 1880293376
+      },
+      {
+        "name": "len",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 8,
+        "references": 1,
+        "packed": 1245192
+      },
+      {
+        "name": "i",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 12,
+        "references": 4,
+        "packed": 1048588
+      },
+      {
+        "name": "count",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 16,
+        "references": 3,
+        "packed": 1048592
+      },
+      {
+        "name": "tmp",
+        "type": "int",
+        "scope": 2,
+        "storage_class": "local",
+        "offset": 20,
+        "references": 1,
+        "packed": 2097172
+      },
+      {
+        "name": "uart_flush",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "count",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 0,
+        "references": 2,
+        "packed": 1048576
+      },
+      {
+        "name": "tmp",
+        "type": "int",
+        "scope": 2,
+        "storage_class": "local",
+        "offset": 4,
+        "references": 1,
+        "packed": 2097156
+      },
+      {
+        "name": "uart_init",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "baud",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 0,
+        "references": 1,
+        "packed": 1245184
+      },
+      {
+        "name": "i",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 4,
+        "references": 4,
+        "packed": 1048580
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 1900,
+      "arena_only": 724,
+      "trie_only": 2437,
+      "arena_bitpack": 460,
+      "trie_bitpack": 1573,
+      "trie_arena": 645
+    },
+    "peak": {
+      "baseline_bytes": 1382,
+      "compressed_bytes": 261,
+      "savings_pct": 81.11,
+      "live_symbols": 12
+    }
+  },
+  "can-bus-controller": {
+    "baseline_bytes": 2815,
+    "compressed_bytes": 824,
+    "savings_pct": 70.73,
+    "symbol_table": [
+      {
+        "name": "can_rx_buf_head",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 65536
+      },
+      {
+        "name": "can_rx_buf_tail",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 4,
+        "references": 0,
+        "packed": 65540
+      },
+      {
+        "name": "can_rx_filter_id",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 8,
+        "references": 0,
+        "packed": 65544
+      },
+      {
+        "name": "can_rx_mask",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 12,
+        "references": 0,
+        "packed": 65548
+      },
+      {
+        "name": "can_tx_buf_head",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 16,
+        "references": 0,
+        "packed": 65552
+      },
+      {
+        "name": "can_tx_buf_tail",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 20,
+        "references": 0,
+        "packed": 65556
+      },
+      {
+        "name": "can_tx_priority",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 24,
+        "references": 0,
+        "packed": 65560
+      },
+      {
+        "name": "can_status_bus_off",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 28,
+        "references": 0,
+        "packed": 65564
+      },
+      {
+        "name": "can_status_err_warn",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 32,
+        "references": 0,
+        "packed": 65568
+      },
+      {
+        "name": "motor_stepper_pos_actual",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 36,
+        "references": 0,
+        "packed": 65572
+      },
+      {
+        "name": "motor_stepper_pos_target",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 40,
+        "references": 0,
+        "packed": 65576
+      },
+      {
+        "name": "motor_stepper_vel_max",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 44,
+        "references": 0,
+        "packed": 65580
+      },
+      {
+        "name": "motor_stepper_accel_rate",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 48,
+        "references": 0,
+        "packed": 65584
+      },
+      {
+        "name": "motor_pwm_duty_cycle",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 52,
+        "references": 0,
+        "packed": 65588
+      },
+      {
+        "name": "motor_pwm_freq_hz",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 56,
+        "references": 0,
+        "packed": 65592
+      },
+      {
+        "name": "motor_driver_fault",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 60,
+        "references": 0,
+        "packed": 65596
+      },
+      {
+        "name": "telemetry_packet_count",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 64,
+        "references": 0,
+        "packed": 65600
+      },
+      {
+        "name": "telemetry_packet_crc",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 68,
+        "references": 0,
+        "packed": 65604
+      },
+      {
+        "name": "telemetry_tx_rate_hz",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 72,
+        "references": 0,
+        "packed": 65608
+      },
+      {
+        "name": "can_init_registers",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "baud_prescaler",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 0,
+        "references": 0,
+        "packed": 1245184
+      },
+      {
+        "name": "can_reg_btr0",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 4,
+        "references": 0,
+        "packed": 1048580
+      },
+      {
+        "name": "can_reg_btr1",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 8,
+        "references": 0,
+        "packed": 1048584
+      },
+      {
+        "name": "can_reg_ocr",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 12,
+        "references": 0,
+        "packed": 1048588
+      },
+      {
+        "name": "motor_update_pid",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "motor_pid_error_p",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 0,
+        "references": 0,
+        "packed": 1048576
+      },
+      {
+        "name": "motor_pid_error_i",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 4,
+        "references": 0,
+        "packed": 1048580
+      },
+      {
+        "name": "motor_pid_error_d",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 8,
+        "references": 0,
+        "packed": 1048584
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 2591,
+      "arena_only": 1199,
+      "trie_only": 4444,
+      "arena_bitpack": 863,
+      "trie_bitpack": 3180,
+      "trie_arena": 1160
+    },
+    "peak": {
+      "baseline_bytes": 2506,
+      "compressed_bytes": 726,
+      "savings_pct": 71.03,
+      "live_symbols": 24
+    }
+  },
+  "nested-scopes-c": {
+    "baseline_bytes": 1380,
+    "compressed_bytes": 294,
+    "savings_pct": 78.7,
+    "symbol_table": [
+      {
+        "name": "global_system_state",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 65536
+      },
+      {
+        "name": "global_error_counter",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 4,
+        "references": 2,
+        "packed": 65540
+      },
+      {
+        "name": "sample_rate",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 8,
+        "references": 0,
+        "packed": 65544
+      },
+      {
+        "name": "compute_metrics",
+        "type": "function",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 3221291008
+      },
+      {
+        "name": "input_factor",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 0,
+        "references": 2,
+        "packed": 1245184
+      },
+      {
+        "name": "sample_rate",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "param",
+        "offset": 4,
+        "references": 1,
+        "packed": 1245188
+      },
+      {
+        "name": "local_accumulator",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 8,
+        "references": 2,
+        "packed": 1048584
+      },
+      {
+        "name": "local_threshold",
+        "type": "int",
+        "scope": 1,
+        "storage_class": "local",
+        "offset": 12,
+        "references": 1,
+        "packed": 1048588
+      },
+      {
+        "name": "loop_i",
+        "type": "int",
+        "scope": 2,
+        "storage_class": "local",
+        "offset": 16,
+        "references": 3,
+        "packed": 2097168
+      },
+      {
+        "name": "block_sample",
+        "type": "int",
+        "scope": 2,
+        "storage_class": "local",
+        "offset": 20,
+        "references": 2,
+        "packed": 2097172
+      },
+      {
+        "name": "local_threshold",
+        "type": "int",
+        "scope": 3,
+        "storage_class": "local",
+        "offset": 24,
+        "references": 1,
+        "packed": 3145752
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 1292,
+      "arena_only": 512,
+      "trie_only": 1464,
+      "arena_bitpack": 380,
+      "trie_bitpack": 1008,
+      "trie_arena": 426
+    },
+    "peak": {
+      "baseline_bytes": 1380,
+      "compressed_bytes": 294,
+      "savings_pct": 78.7,
+      "live_symbols": 11
+    }
+  },
+  "random-worst-case": {
+    "baseline_bytes": 2172,
+    "compressed_bytes": 480,
+    "savings_pct": 77.9,
+    "symbol_table": [
+      {
+        "name": "alpha",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 65536
+      },
+      {
+        "name": "beta",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 4,
+        "references": 0,
+        "packed": 65540
+      },
+      {
+        "name": "gamma",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 8,
+        "references": 0,
+        "packed": 65544
+      },
+      {
+        "name": "delta",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 12,
+        "references": 0,
+        "packed": 65548
+      },
+      {
+        "name": "epsilon",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 16,
+        "references": 0,
+        "packed": 65552
+      },
+      {
+        "name": "zeta",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 20,
+        "references": 0,
+        "packed": 65556
+      },
+      {
+        "name": "eta",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 24,
+        "references": 0,
+        "packed": 65560
+      },
+      {
+        "name": "theta",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 28,
+        "references": 0,
+        "packed": 65564
+      },
+      {
+        "name": "iota",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 32,
+        "references": 0,
+        "packed": 65568
+      },
+      {
+        "name": "kappa",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 36,
+        "references": 0,
+        "packed": 65572
+      },
+      {
+        "name": "lambda",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 40,
+        "references": 0,
+        "packed": 65576
+      },
+      {
+        "name": "mu",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 44,
+        "references": 0,
+        "packed": 65580
+      },
+      {
+        "name": "nu",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 48,
+        "references": 0,
+        "packed": 65584
+      },
+      {
+        "name": "xi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 52,
+        "references": 0,
+        "packed": 65588
+      },
+      {
+        "name": "omicron",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 56,
+        "references": 0,
+        "packed": 65592
+      },
+      {
+        "name": "pi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 60,
+        "references": 0,
+        "packed": 65596
+      },
+      {
+        "name": "rho",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 64,
+        "references": 0,
+        "packed": 65600
+      },
+      {
+        "name": "sigma",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 68,
+        "references": 0,
+        "packed": 65604
+      },
+      {
+        "name": "tau",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 72,
+        "references": 0,
+        "packed": 65608
+      },
+      {
+        "name": "upsilon",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 76,
+        "references": 0,
+        "packed": 65612
+      },
+      {
+        "name": "phi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 80,
+        "references": 0,
+        "packed": 65616
+      },
+      {
+        "name": "chi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 84,
+        "references": 0,
+        "packed": 65620
+      },
+      {
+        "name": "psi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 88,
+        "references": 0,
+        "packed": 65624
+      },
+      {
+        "name": "omega",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 92,
+        "references": 0,
+        "packed": 65628
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 1980,
+      "arena_only": 732,
+      "trie_only": 2934,
+      "arena_bitpack": 444,
+      "trie_bitpack": 1934,
+      "trie_arena": 768
+    },
+    "peak": {
+      "baseline_bytes": 2172,
+      "compressed_bytes": 480,
+      "savings_pct": 77.9,
+      "live_symbols": 24
+    }
+  }
+}
