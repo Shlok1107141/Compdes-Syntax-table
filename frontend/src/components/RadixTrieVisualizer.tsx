@@ -62,7 +62,7 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
             insert(child, word.slice(common), symbol);
             return;
           } else {
-            // Split edge at common prefix! (Radix / Patricia compression)
+            // Split edge at common prefix (Radix / Patricia compression)
             const splitNode: TrieNode = {
               id: nodeIdCounter++,
               edgeLabel: edge.slice(0, common),
@@ -144,41 +144,41 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
         {/* Node Box */}
         <div
           onClick={() => setSelectedNode(node)}
-          className={`cursor-pointer rounded-xl px-3 py-2 border transition-all duration-200 select-none flex flex-col items-center min-w-[100px] text-center shadow-md ${
+          className={`cursor-pointer rounded-lg px-3 py-2 border transition-all duration-150 select-none flex flex-col items-center min-w-[100px] text-center shadow-2xs ${
             node.id === 0
-              ? 'bg-slate-950 border-slate-700 text-slate-300'
+              ? 'bg-white border-2 border-slate-300 text-slate-800'
               : node.isTerminal
               ? isSelected
-                ? 'bg-emerald-600 border-emerald-400 text-white ring-2 ring-emerald-400/50 shadow-emerald-900/50'
-                : 'bg-emerald-950/70 border-emerald-500/40 text-emerald-200 hover:border-emerald-400'
+                ? 'bg-orange-100 border-2 border-orange-600 text-orange-950 ring-2 ring-orange-500/30'
+                : 'bg-orange-50 border border-orange-300 text-orange-950 hover:border-orange-500'
               : isSelected
-              ? 'bg-indigo-600 border-indigo-400 text-white ring-2 ring-indigo-400/50 shadow-indigo-900/50'
-              : 'bg-indigo-950/70 border-indigo-500/40 text-indigo-200 hover:border-indigo-400'
+              ? 'bg-teal-100 border-2 border-teal-700 text-teal-950 ring-2 ring-teal-500/30'
+              : 'bg-teal-50 border border-teal-300 text-teal-900 hover:border-teal-500'
           }`}
         >
           {/* Edge Label / Prefix */}
           <div className="flex items-center space-x-1 font-mono font-bold text-xs">
             {node.id === 0 ? (
-              <span className="text-slate-400">ROOT</span>
+              <span className="text-slate-500">ROOT</span>
             ) : (
               <span>"{node.edgeLabel}"</span>
             )}
           </div>
 
           {/* Arena Index / Leaf Tag */}
-          <div className="flex items-center space-x-1 mt-1 text-[10px] font-mono opacity-80">
-            <span className="px-1.5 py-0.2 rounded bg-black/40">
+          <div className="flex items-center space-x-1 mt-1 text-[10px] font-mono">
+            <span className="px-1.5 py-0.2 rounded bg-white/80 border border-slate-200 text-slate-600">
               arena[{node.arenaIndex}]
             </span>
             {node.isTerminal && (
-              <span className="px-1 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+              <span className="px-1 rounded bg-orange-100 text-orange-800 font-semibold border border-orange-200">
                 sym
               </span>
             )}
           </div>
 
           {node.symbolType && (
-            <span className="text-[9px] text-emerald-300/80 font-mono mt-0.5">
+            <span className="text-[10px] text-teal-700 font-mono mt-0.5">
               {node.symbolType}
             </span>
           )}
@@ -188,13 +188,13 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
         {node.children.length > 0 && (
           <div className="flex flex-col items-center w-full">
             {/* Vertical connector from parent */}
-            <div className="w-0.5 h-6 bg-slate-700" />
+            <div className="w-0.5 h-6 bg-slate-300" />
 
             {/* Horizontal Branch Bar */}
             <div className="relative flex justify-center gap-4 sm:gap-6 pt-0">
               {node.children.length > 1 && (
                 <div
-                  className="absolute top-0 h-0.5 bg-slate-700"
+                  className="absolute top-0 h-0.5 bg-slate-300"
                   style={{
                     left: `calc(100% / ${node.children.length * 2})`,
                     right: `calc(100% / ${node.children.length * 2})`,
@@ -205,7 +205,7 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
               {/* Children Nodes */}
               {node.children.map((child) => (
                 <div key={child.id} className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-slate-700" />
+                  <div className="w-0.5 h-4 bg-slate-300" />
                   {renderTrieBranch(child, depth + 1)}
                 </div>
               ))}
@@ -221,46 +221,49 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
   }
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
       {/* Header Bar */}
-      <div className="p-4 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <Network className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-base font-semibold text-white">
+            <Network className="w-4 h-4 text-teal-700" />
+            <h3 className="text-base font-bold text-slate-900">
               Radix (Patricia) Trie Visualizer
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Showcase Demo
+            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+              Prefix Intern Table
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Edges represent shared prefix substrings. The trie itself functions as the string intern table.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Edges represent compacted prefix strings. The trie replaces independent heap allocations for identifier names.
           </p>
         </div>
 
         {/* Quick Zoom & Reset Controls */}
         <div className="flex items-center space-x-2">
           <button
+            type="button"
             onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.15))}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 transition-colors shadow-2xs"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs font-mono text-slate-400 min-w-[42px] text-center">
+          <span className="text-xs font-mono text-slate-600 min-w-[42px] text-center font-medium">
             {Math.round(zoomLevel * 100)}%
           </span>
           <button
+            type="button"
             onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.15))}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 transition-colors shadow-2xs"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={() => setZoomLevel(1)}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 transition-colors shadow-2xs"
             title="Reset Zoom"
           >
             <RotateCcw className="w-4 h-4" />
@@ -269,48 +272,49 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
       </div>
 
       {/* Metrics Banner */}
-      <div className="px-4 py-3 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
         <div className="flex items-center space-x-4">
           <div>
             <span className="text-slate-500">Arena Nodes:</span>{' '}
-            <span className="text-indigo-300 font-bold">{totalNodes}</span>
+            <span className="text-teal-800 font-bold">{totalNodes}</span>
           </div>
           <div>
             <span className="text-slate-500">Prefix Characters Spared:</span>{' '}
-            <span className="text-emerald-400 font-bold">{prefixSavedBytes} chars</span>
+            <span className="text-orange-600 font-bold">{prefixSavedBytes} chars</span>
           </div>
           <div>
             <span className="text-slate-500">Edge Storage:</span>{' '}
-            <span className="text-cyan-300 font-bold">{totalDeduplicatedBytes} B</span>
+            <span className="text-slate-800 font-bold">{totalDeduplicatedBytes} B</span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 font-sans text-slate-400 text-[11px]">
-          <Info className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Click any node to inspect prefix chunk & arena offset</span>
+        <div className="flex items-center space-x-1.5 font-sans text-slate-500 text-[11px]">
+          <Info className="w-3.5 h-3.5 text-teal-700" />
+          <span>Click any node to inspect prefix edge & 16-bit arena offset</span>
         </div>
       </div>
 
       {/* Node Inspector Drawer if selected */}
       {selectedNode && (
-        <div className="px-4 py-2.5 bg-indigo-950/40 border-b border-indigo-500/20 flex items-center justify-between text-xs animate-in fade-in">
+        <div className="px-4 py-2.5 bg-teal-50/70 border-b border-teal-200 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-3">
-            <span className="font-semibold text-indigo-300">
-              Selected: <code className="bg-slate-900 px-1.5 py-0.5 rounded text-white">"{selectedNode.edgeLabel}"</code>
+            <span className="font-semibold text-teal-900">
+              Selected Edge: <code className="bg-white border border-teal-200 px-1.5 py-0.5 rounded text-teal-950 font-bold">"{selectedNode.edgeLabel}"</code>
             </span>
-            <span className="text-slate-400 font-mono">
-              Arena Index: <code className="text-indigo-200">arena[{selectedNode.arenaIndex}]</code> (16-bit uint)
+            <span className="text-slate-600 font-mono">
+              Arena Index: <code className="text-teal-800 font-bold">arena[{selectedNode.arenaIndex}]</code> (16-bit relative index)
             </span>
             {selectedNode.isTerminal && selectedNode.symbolName && (
-              <span className="text-emerald-400 font-mono flex items-center space-x-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="text-orange-700 font-mono flex items-center space-x-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-orange-600" />
                 <span>Full Symbol: <strong>{selectedNode.symbolName}</strong> ({selectedNode.symbolType})</span>
               </span>
             )}
           </div>
           <button
+            type="button"
             onClick={() => setSelectedNode(null)}
-            className="text-xs text-indigo-300 hover:text-white underline font-sans"
+            className="text-xs text-teal-800 hover:text-teal-950 underline font-sans"
           >
             Close
           </button>
@@ -318,9 +322,9 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
       )}
 
       {/* Interactive Graph Canvas / Tree View */}
-      <div className="p-8 overflow-x-auto min-h-[460px] max-h-[560px] bg-slate-950/90 flex justify-center items-start scrollbar-thin scrollbar-thumb-slate-700">
+      <div className="p-8 overflow-x-auto min-h-[460px] max-h-[560px] bg-slate-50/40 flex justify-center items-start">
         <div
-          className="transition-transform duration-200 origin-top flex justify-center pb-8"
+          className="transition-transform duration-150 origin-top flex justify-center pb-8"
           style={{ transform: `scale(${zoomLevel})` }}
         >
           {renderTrieBranch(root)}
@@ -328,11 +332,11 @@ export const RadixTrieVisualizer: React.FC<RadixTrieVisualizerProps> = ({ symbol
       </div>
 
       {/* Visualizer Footer Explainer */}
-      <div className="p-3 bg-slate-950/90 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+      <div className="p-3 bg-white border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
         <span>
-          🌳 <strong>Patricia Trie Guarantee:</strong> No two identifiers duplicate edge prefix memory. All edges reside in a contiguous 16-bit indexed arena block.
+          🌳 <strong className="text-slate-700">Patricia Trie Guarantee:</strong> Common prefix characters are interned in contiguous 16-bit indexed arena nodes.
         </span>
-        <span className="font-mono text-emerald-400">Zero Pointer Overhead</span>
+        <span className="font-mono text-teal-700 font-semibold">Zero 64-bit Pointer Bloat</span>
       </div>
     </div>
   );

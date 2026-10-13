@@ -10,26 +10,24 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAvailable }) => {
   return (
-    <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+    <header className="border-b border-slate-200 bg-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand & Course */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Cpu className="w-5 h-5 text-indigo-400" />
-            </div>
+          <div className="w-9 h-9 rounded-lg bg-teal-700 text-white flex items-center justify-center shadow-xs">
+            <Cpu className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-white text-base sm:text-lg tracking-tight">
+              <span className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
                 Compressed Symbol Table
               </span>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-semibold rounded-md bg-teal-50 text-teal-800 border border-teal-200">
                 BCSE307L
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">
-              Embedded Memory Optimization Sprint (Patricia Trie + 16b Arena + Bitpack)
+            <p className="text-xs text-slate-500 hidden sm:block">
+              Embedded Memory Optimization (Patricia Trie &bull; 16-bit Arena &bull; Bit-Packed Word)
             </p>
           </div>
         </div>
@@ -40,18 +38,18 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
             <div
               className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border ${
                 isBackendAvailable
-                  ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-300'
-                  : 'bg-amber-950/50 border-amber-500/30 text-amber-300'
+                  ? 'bg-teal-50 border-teal-200 text-teal-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
               }`}
               title={
                 isBackendAvailable
                   ? 'Connected to FastAPI backend with C engine ready'
-                  : 'Backend not responding (start it with docker compose up)'
+                  : 'Backend not responding (start it with docker compose up or uvicorn on port 8000)'
               }
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  isBackendAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                  isBackendAvailable ? 'bg-teal-600 animate-pulse' : 'bg-amber-500'
                 }`}
               />
               <span>{isBackendAvailable ? 'Engine Online' : 'Engine Offline'}</span>
@@ -59,18 +57,18 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
           )}
 
           {/* Mode Toggle Button */}
-          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1 text-xs">
             <button
               type="button"
               onClick={() => onToggleMode('offline')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
                 mode === 'offline'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/80'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
               title="No backend needed: the C engine's precomputed results for the built-in samples"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-teal-700" />
               <span>Offline Samples</span>
             </button>
             <button
@@ -78,8 +76,8 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
               onClick={() => onToggleMode('live')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
                 mode === 'live'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-teal-700 text-white font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
               title="Runs the C engine on the code in the editor via POST /analyze"
             >
@@ -88,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
               {mode === 'live' && (
                 <span
                   className={`w-2 h-2 rounded-full ml-1 ${
-                    isBackendAvailable ? 'bg-emerald-300 animate-pulse' : 'bg-amber-400'
+                    isBackendAvailable ? 'bg-teal-200 animate-pulse' : 'bg-orange-300'
                   }`}
                 />
               )}
@@ -100,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAva
             href="https://github.com/Shlok1107141/Compdes-Syntax-table"
             target="_blank"
             rel="noreferrer"
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+            className="p-2 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors border border-slate-200 shadow-xs"
             title="View on GitHub"
           >
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">

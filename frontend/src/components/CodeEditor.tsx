@@ -36,18 +36,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl backdrop-blur-sm">
+    <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
       {/* Top Header Bar */}
-      <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-2">
+      <div className="px-4 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-2">
-          <FileCode className="w-4 h-4 text-indigo-400" />
-          <span className="text-sm font-semibold text-slate-200">C Source Input</span>
+          <FileCode className="w-4 h-4 text-teal-700" />
+          <span className="text-sm font-semibold text-slate-900">C Source Input</span>
           <span className="text-xs text-slate-500 font-mono">({lineCount} lines)</span>
         </div>
 
         {/* Preset Selector */}
         <div className="flex items-center space-x-2">
-          <label htmlFor="preset-select" className="text-xs text-slate-400 hidden sm:inline">
+          <label htmlFor="preset-select" className="text-xs text-slate-600 hidden sm:inline">
             Preset:
           </label>
           <select
@@ -57,7 +57,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               const p = SAMPLE_PRESETS.find((preset) => preset.id === e.target.value);
               if (p) onSelectPreset(p);
             }}
-            className="text-xs bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+            className="text-xs bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 font-medium"
           >
             {SAMPLE_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -70,20 +70,20 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
       {/* Preset Details / Description pill */}
       {selectedPresetId && (
-        <div className="px-4 py-2 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+        <div className="px-4 py-2 bg-teal-50/40 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
           <span className="truncate">
             {SAMPLE_PRESETS.find((p) => p.id === selectedPresetId)?.description}
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 shrink-0 ml-2">
+          <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-teal-100 text-teal-800 border border-teal-200 shrink-0 ml-2">
             {SAMPLE_PRESETS.find((p) => p.id === selectedPresetId)?.badge}
           </span>
         </div>
       )}
 
       {/* Code Textarea with Line Numbers */}
-      <div className="relative flex-1 min-h-[360px] flex bg-slate-950 font-mono text-xs sm:text-sm">
+      <div className="relative flex-1 min-h-[360px] flex bg-white font-mono text-xs sm:text-sm">
         {/* Line Numbers Sidebar */}
-        <div className="py-4 pl-3 pr-2 select-none text-right text-slate-600 bg-slate-950/80 border-r border-slate-800/60 min-w-[42px]">
+        <div className="py-4 pl-3 pr-2 select-none text-right text-slate-400 bg-slate-50 border-r border-slate-200 min-w-[44px]">
           {Array.from({ length: Math.max(lineCount, 15) }).map((_, i) => (
             <div key={i} className="leading-6 text-[11px]">
               {i + 1}
@@ -101,32 +101,32 @@ int sensor_press;
 void system_init() {
     int local_counter;
 }"
-          className="w-full h-full p-4 bg-transparent text-slate-200 focus:outline-none resize-none leading-6 font-mono placeholder:text-slate-600"
+          className="w-full h-full p-4 bg-white text-slate-900 focus:outline-none resize-none leading-6 font-mono placeholder:text-slate-400"
           spellCheck={false}
         />
       </div>
 
       {/* Bottom Action Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between flex-wrap gap-2">
+      <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center space-x-2">
           {/* Byte size indicator */}
           <div
             className={`text-xs px-2.5 py-1 rounded-md font-mono flex items-center space-x-1 border ${
               isOversized
-                ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 font-bold'
+                ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold'
                 : byteCount > 32 * 1024
-                ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
+                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                : 'bg-white text-slate-700 border-slate-200 shadow-2xs'
             }`}
           >
             <span>{byteCount.toLocaleString()} / 65,536 B</span>
-            {!isOversized && <CheckCircle2 className="w-3 h-3 text-emerald-400 ml-1" />}
+            {!isOversized && <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 ml-1" />}
           </div>
 
           <button
             type="button"
             onClick={handleReset}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
             title="Reset to Prototype 30"
           >
             <RotateCcw className="w-4 h-4" />
@@ -135,22 +135,22 @@ void system_init() {
           <button
             type="button"
             onClick={handleClear}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
             title="Clear Code"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Analyze Button */}
+        {/* Analyze Button (Primary Orange CTA) */}
         <button
           type="button"
           onClick={onAnalyze}
           disabled={isLoading || isOversized || code.trim().length === 0}
-          className={`px-5 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all shadow-lg ${
+          className={`px-5 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 transition-all shadow-xs ${
             isLoading || isOversized || code.trim().length === 0
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-              : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-indigo-500/25 active:scale-[0.98]'
+              ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+              : 'bg-orange-600 hover:bg-orange-700 text-white active:scale-[0.98]'
           }`}
         >
           {isLoading ? (
