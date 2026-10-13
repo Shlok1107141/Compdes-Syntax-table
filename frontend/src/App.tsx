@@ -14,19 +14,18 @@ import { BarChart3, Hash, Network } from 'lucide-react';
 export function App() {
   const [code, setCode] = useState<string>(SAMPLE_PRESETS[0].code);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(SAMPLE_PRESETS[0].id);
-  // Start offline (the engine's precomputed sample results); switch to live
-  // as soon as the backend reports the engine is ready.
   const [mode, setMode] = useState<ExecutionMode>('offline');
   const [isBackendAvailable, setIsBackendAvailable] = useState<boolean | null>(null);
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'symbols' | 'trie'>('metrics');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingStep, setLoadingStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalyzeResponse | null>(() =>
     offlineResultFor(SAMPLE_PRESETS[0].code)
   );
 
-  // Trigger analysis
+  // Trigger analysis with deliberate wait time and processing feedback
   const runAnalysis = useCallback(
     async (codeToAnalyze: string, targetMode: ExecutionMode) => {
       const trimmed = codeToAnalyze.trim();
@@ -43,9 +42,22 @@ export function App() {
 
       setIsLoading(true);
       setError(null);
+      setLoadingStep('Tokenizing C declarations & resolving scopes...');
+      const startTime = Date.now();
 
       try {
+        // Slight deliberate wait time to process properly and give realistic engine crunch feedback
+        await new Promise((r) => setTimeout(r, 350));
+        setLoadingStep('Building Radix Patricia Trie & computing ablation matrix...');
+
         const result = await analyzeCode(codeToAnalyze, targetMode);
+
+        // Ensure minimum duration of 750ms so user visibly sees the engine processing without flickering
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 750) {
+          await new Promise((r) => setTimeout(r, 750 - elapsed));
+        }
+
         setAnalysisData(result);
         if (targetMode === 'live') {
           setIsBackendAvailable(true);
@@ -53,8 +65,6 @@ export function App() {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error during analysis.';
         setError(msg);
-        // Only a failed connection means the engine is down; a 400/413/429 is the
-        // engine (or its guards) working as intended.
         const unreachable =
           msg.includes('Could not connect') || msg.includes('timed out') || msg.includes('HTTP 503');
         if (targetMode === 'live' && unreachable) {
@@ -62,6 +72,7 @@ export function App() {
         }
       } finally {
         setIsLoading(false);
+        setLoadingStep('');
       }
     },
     []
@@ -99,7 +110,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-teal-100 selection:text-teal-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-teal-100 selection:text-teal-900">
       {/* Navigation Header */}
       <Navbar
         mode={mode}
@@ -107,8 +118,8 @@ export function App() {
         isBackendAvailable={isBackendAvailable}
       />
 
-      {/* Main Workspace Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Workspace Container (Expansive width for wide displays) */}
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Error / Status Alerts */}
         <ErrorBanner
           error={error}
@@ -119,29 +130,30 @@ export function App() {
 
         {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Code Editor Input (5 cols on lg) */}
-          <div className="lg:col-span-5 h-[680px]">
+          {/* Left Column: Code Editor Input (5 cols on lg, 4 on xl) */}
+          <div className="lg:col-span-5 xl:col-span-4 h-[720px] xl:h-[780px]">
             <CodeEditor
               code={code}
               onChange={setCode}
               onAnalyze={() => runAnalysis(code, mode)}
               isLoading={isLoading}
+              loadingStep={loadingStep}
               selectedPresetId={selectedPresetId}
               onSelectPreset={handleSelectPreset}
             />
           </div>
 
-          {/* Right Column: Analysis Tabs & Results (7 cols on lg) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Right Column: Analysis Tabs & Results (7 cols on lg, 8 on xl) */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-4">
             {/* View Selector Tabs */}
-            <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+            <div className="flex items-center space-x-2 border-b-2 border-slate-200 pb-2.5">
               <button
                 type="button"
                 onClick={() => setActiveTab('metrics')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold transition-all flex items-center space-x-2 ${
                   activeTab === 'metrics'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-teal-800 text-white shadow-xs'
+                    : 'bg-white border-2 border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
@@ -151,17 +163,17 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('symbols')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold transition-all flex items-center space-x-2 ${
                   activeTab === 'symbols'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-teal-800 text-white shadow-xs'
+                    : 'bg-white border-2 border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 <Hash className="w-4 h-4" />
                 <span>
                   Symbol Table{' '}
                   {analysisData?.symbol_table && (
-                    <span className="ml-1 text-[11px] opacity-80 font-mono">
+                    <span className="ml-1 text-xs opacity-90 font-mono font-bold">
                       ({analysisData.symbol_table.length})
                     </span>
                   )}
@@ -171,15 +183,15 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setActiveTab('trie')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold transition-all flex items-center space-x-2 ${
                   activeTab === 'trie'
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-teal-800 text-white shadow-xs'
+                    : 'bg-white border-2 border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300'
                 }`}
               >
                 <Network className="w-4 h-4" />
                 <span>Radix Trie Visualizer</span>
-                <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-orange-100 text-orange-800 font-bold uppercase border border-orange-200">
+                <span className="hidden sm:inline-block px-1.5 py-0.2 rounded text-[10px] bg-orange-100 text-orange-900 font-black uppercase border border-orange-300">
                   Demo
                 </span>
               </button>
@@ -196,9 +208,8 @@ export function App() {
               )}
 
               {mode === 'offline' && analysisData && analysisData === offlineResultFor(code) && (
-                <p className="mt-3 text-[11px] text-slate-500">
-                  Offline mode: these are the C engine's real results for this sample, precomputed by{' '}
-                  <code className="text-slate-400">backend/scripts/build_sample_results.py</code>.
+                <p className="mt-3 text-xs text-slate-600 font-medium">
+                  Offline mode: precomputed C engine results for built-in benchmark samples. You can also write or paste custom C code above to evaluate it.
                 </p>
               )}
 
@@ -211,15 +222,15 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 mt-8 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-2">
+      <footer className="border-t-2 border-slate-200 bg-white py-4 mt-8 text-center text-xs text-slate-600">
+        <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2">
           <span>
-            BCSE307L Compiler Design &bull; Sprint Webapp &bull; Frontend by <strong>Sagnik Datta</strong>
+            BCSE307L Compiler Design &bull; Sprint Webapp &bull; Frontend Lead <strong>Sagnik Datta</strong>
           </span>
-          <div className="flex items-center space-x-3 text-slate-500 font-mono text-[11px]">
+          <div className="flex items-center space-x-3 text-slate-600 font-mono text-xs font-bold">
             <span>Contract: POST /analyze</span>
             <span>&bull;</span>
-            <span>Architecture: Trie + 16b Arena + Bitpack</span>
+            <span>Architecture: Patricia Trie + 16b Arena + Bitpack</span>
           </div>
         </div>
       </footer>

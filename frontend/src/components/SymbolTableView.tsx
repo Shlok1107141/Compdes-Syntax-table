@@ -25,12 +25,10 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
   const uniqueStorageClasses = Array.from(new Set(symbols.map((s) => s.storage_class)));
   const uniqueScopes = Array.from(new Set(symbols.map((s) => s.scope))).sort((a, b) => a - b);
 
-  // The exact word the compressed table stores (from the engine):
-  // [type: 4 bits][scope: 8 bits][storage_class: 4 bits][offset: 16 bits], high bits first.
+  // Exact 32-bit word layout: [type: 4 bits][scope: 8 bits][storage_class: 4 bits][offset: 16 bits]
   const describePackedWord = (sym: SymbolEntry): { hex: string; fields: string } => {
     let word = sym.packed;
     if (word === undefined) {
-      // Compute fallback packed word if missing from backend
       const typeCode = sym.type.includes('*') ? 2 : sym.type.includes('()') ? 3 : sym.type === 'char' ? 1 : 0;
       const storageCode = sym.storage_class === 'global' ? 1 : sym.storage_class === 'static' ? 2 : sym.storage_class === 'param' ? 3 : 0;
       const scopeCode = sym.scope & 0xff;
@@ -42,10 +40,10 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
     return {
       hex: '0x' + unsignedWord.toString(16).toUpperCase().padStart(8, '0'),
       fields:
-        `type ${bits.slice(0, 4)} (${unsignedWord >>> 28})\n` +
-        `scope ${bits.slice(4, 12)} (${(unsignedWord >>> 20) & 0xff})\n` +
-        `storage ${bits.slice(12, 16)} (${(unsignedWord >>> 16) & 0xf})\n` +
-        `offset ${bits.slice(16)} (${unsignedWord & 0xffff})`,
+        `Type: ${bits.slice(0, 4)} (${unsignedWord >>> 28})\n` +
+        `Scope: ${bits.slice(4, 12)} (${(unsignedWord >>> 20) & 0xff})\n` +
+        `Class: ${bits.slice(12, 16)} (${(unsignedWord >>> 16) & 0xf})\n` +
+        `Offset: ${bits.slice(16)} (${unsignedWord & 0xffff} B)`,
     };
   };
 
@@ -60,18 +58,18 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+    <div className="rounded-xl border-2 border-slate-300 bg-white overflow-hidden shadow-xs">
       {/* Table Header & Search Controls */}
-      <div className="p-4 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 border-b-2 border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <Hash className="w-4 h-4 text-teal-700" />
-            <h3 className="text-base font-bold text-slate-900">Parsed Symbol Table</h3>
-            <span className="px-2 py-0.5 rounded-md text-xs font-mono bg-slate-100 text-slate-700 border border-slate-200">
-              {filteredSymbols.length} / {symbols.length}
+            <Hash className="w-5 h-5 text-teal-800" />
+            <h3 className="text-base font-black text-slate-900 tracking-tight">Parsed Symbol Table</h3>
+            <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs">
+              {filteredSymbols.length} / {symbols.length} identifiers
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-600 font-medium mt-0.5">
             Parsed declarations showing 32-bit bit-packed memory layout per symbol.
           </p>
         </div>
@@ -85,17 +83,17 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
               placeholder="Search identifier or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 w-44 sm:w-52"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white border-2 border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-700 font-medium w-48 sm:w-56"
             />
           </div>
 
           {/* Storage Filter */}
           <div className="flex items-center space-x-1 text-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <Filter className="w-3.5 h-3.5 text-slate-500" />
             <select
               value={selectedStorage}
               onChange={(e) => setSelectedStorage(e.target.value)}
-              className="bg-slate-50 border border-slate-300 text-slate-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-600 text-xs"
+              className="bg-white border-2 border-slate-300 text-slate-900 font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-600 text-xs"
             >
               <option value="all">All Classes</option>
               {uniqueStorageClasses.map((sc) => (
@@ -111,7 +109,7 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
             <select
               value={selectedScope}
               onChange={(e) => setSelectedScope(e.target.value)}
-              className="bg-slate-50 border border-slate-300 text-slate-700 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-600 text-xs"
+              className="bg-white border-2 border-slate-300 text-slate-900 font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-600 text-xs"
             >
               <option value="all">All Scopes</option>
               {uniqueScopes.map((scope) => (
@@ -126,7 +124,7 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
           <button
             type="button"
             onClick={exportToJson}
-            className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-300 transition-colors shadow-2xs"
+            className="p-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-2 border-slate-300 transition-colors shadow-2xs font-bold"
             title="Export JSON"
           >
             <Download className="w-4 h-4" />
@@ -135,23 +133,23 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
       </div>
 
       {/* Table Content */}
-      <div className="overflow-x-auto max-h-[420px]">
+      <div className="overflow-x-auto max-h-[460px]">
         <table className="w-full text-left border-collapse text-xs">
-          <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+          <thead className="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-2.5 px-4">Identifier Name</th>
-              <th className="py-2.5 px-4">Type</th>
-              <th className="py-2.5 px-4">Scope</th>
-              <th className="py-2.5 px-4">Storage Class</th>
-              <th className="py-2.5 px-4">Offset</th>
-              <th className="py-2.5 px-4" title="Uses resolved to this declaration by scoped lookup">Refs</th>
-              <th className="py-2.5 px-4 text-right">Bit-Packed 32b Word</th>
+              <th className="py-3 px-4">Identifier Name</th>
+              <th className="py-3 px-4">Type</th>
+              <th className="py-3 px-4">Scope</th>
+              <th className="py-3 px-4">Storage Class</th>
+              <th className="py-3 px-4">Offset</th>
+              <th className="py-3 px-4" title="Uses resolved to this declaration by scoped lookup">Refs</th>
+              <th className="py-3 px-4 text-right">Bit-Packed 32b Word</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-mono">
             {filteredSymbols.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400 font-sans">
+                <td colSpan={7} className="py-10 text-center text-slate-500 font-sans font-bold">
                   No matching symbols found.
                 </td>
               </tr>
@@ -161,46 +159,46 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
                 return (
                   <tr
                     key={`${sym.name}-${sym.scope}-${idx}`}
-                    className="hover:bg-slate-50/80 transition-colors"
+                    className="hover:bg-teal-50/40 transition-colors"
                   >
-                    <td className="py-2.5 px-4 font-bold text-teal-800">
+                    <td className="py-3 px-4 font-bold text-slate-900 text-sm">
                       {sym.name}
                     </td>
-                    <td className="py-2.5 px-4 text-slate-700 font-medium">
+                    <td className="py-3 px-4 font-bold text-teal-800 text-xs">
                       {sym.type}
                     </td>
-                    <td className="py-2.5 px-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] border border-slate-200">
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded font-bold bg-slate-100 text-slate-800 text-[11px] border border-slate-300">
                         depth {sym.scope}
                       </span>
                     </td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-3 px-4">
                       <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
                           sym.storage_class === 'global'
-                            ? 'bg-teal-50 text-teal-800 border-teal-200'
+                            ? 'bg-teal-100 text-teal-900 border-teal-300'
                             : sym.storage_class === 'static'
-                            ? 'bg-orange-50 text-orange-800 border-orange-200'
+                            ? 'bg-orange-100 text-orange-950 border-orange-300'
                             : sym.storage_class === 'param'
-                            ? 'bg-blue-50 text-blue-800 border-blue-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                            ? 'bg-blue-100 text-blue-900 border-blue-300'
+                            : 'bg-slate-200 text-slate-900 border-slate-300'
                         }`}
                       >
                         {sym.storage_class}
                       </span>
                     </td>
-                    <td className="py-2.5 px-4 text-slate-600">
+                    <td className="py-3 px-4 font-bold text-slate-700">
                       +{sym.offset} B
                     </td>
-                    <td className={`py-2.5 px-4 ${sym.references ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
-                      {sym.references ?? '—'}
+                    <td className={`py-3 px-4 font-bold ${sym.references ? 'text-slate-900' : 'text-slate-400'}`}>
+                      {sym.references ?? '0'}
                     </td>
-                    <td className="py-2.5 px-4 text-right">
+                    <td className="py-3 px-4 text-right">
                       <span
-                        className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-slate-50 text-slate-800 border border-slate-200 text-[11px] shadow-2xs"
-                        title={`Stored 32-bit word:\n${packed.fields}`}
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-teal-50 text-teal-950 border border-teal-300 text-xs font-bold shadow-2xs"
+                        title={`32-bit packed word fields:\n${packed.fields}`}
                       >
-                        <Binary className="w-3 h-3 text-teal-600" />
+                        <Binary className="w-3.5 h-3.5 text-teal-700" />
                         <span>{packed.hex}</span>
                       </span>
                     </td>
@@ -213,11 +211,11 @@ export const SymbolTableView: React.FC<SymbolTableViewProps> = ({ symbols }) => 
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
+      <div className="p-3 bg-slate-50 border-t-2 border-slate-200 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 font-medium">
         <span>
-          💡 <span className="font-semibold text-slate-800">Bit-Packing Scheme:</span> [Type: 4b] [Scope: 8b] [Class: 4b] [Offset: 16b] = Single 32-bit word.
+          💡 <span className="font-extrabold text-slate-900">Bit-Packing Scheme:</span> [Type: 4b] [Scope: 8b] [Storage Class: 4b] [Offset: 16b] = Single 32-bit integer word.
         </span>
-        <span className="text-slate-500 font-mono">Replaces four unpacked ints (16 bytes). Hover a word to decode it.</span>
+        <span className="text-slate-600 font-mono font-bold">Replaces 16 bytes of standard struct pointer padding.</span>
       </div>
     </div>
   );
