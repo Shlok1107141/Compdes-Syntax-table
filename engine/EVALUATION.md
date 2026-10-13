@@ -16,7 +16,7 @@ Every number below is produced by code in this directory and can be re-run.
 
 | Dataset | What it is | Size | Produced by |
 |---|---|---|---|
-| Synthetic sweep | Generated identifier sets: `realistic` (subsystem_field names), `random` (no shared prefixes), `scoped` (functions that redeclare common locals) | 168 rows, n = 10 … 1000 | `run_sweep.sh` → `results.csv` |
+| Synthetic sweep | Generated identifier sets: `realistic` (subsystem_field names), `random` (no shared prefixes), `scoped` (functions that redeclare common locals) | 168 rows, n = 10 … 1000; repeated for 5 seeds (840 rows) | `run_sweep.sh` → `results.csv`; `SEEDS="1 2 3 4 5" OUT=results_seeds.csv ./run_sweep.sh` |
 | Real C corpus | 93 real `.c` files from 5 projects (SQLite extensions, GNU readline, xz, MPFR, this engine), measured **raw** (the file's own declarations) and **preprocessed** with `gcc -E` (everything a compiler's table holds, system headers included) | 133,811 declarations | `real_corpus.py` → `real_corpus.csv` |
 | Speed | Insert / lookup-hit / lookup-miss time for all 8 structures on the synthetic workloads | 48 rows, Linux + Windows | `make bench` → `bench_results.csv` |
 
@@ -70,6 +70,19 @@ ABC beats AB by +7.5% on MPFR and +5.9% on xz, and trails it by 0.7% on readline
 The trie wins when names repeat across scopes (a trie stores a repeated name
 once; the hash tables copy it per declaration) and loses on flat tables of
 unrelated names, where each trie node (10 B) costs more than the shared prefix saves.
+
+**Stable across symbol sets** (`results_seeds.csv`: the same sweep with seeds 1–5,
+840 rows). ABC minus AB, in percentage points of the baseline (positive = ABC smaller),
+mean ± standard deviation over the five seeds:
+
+| Pattern | n=10 | n=50 | n=100 | n=300 | n=1000 | ABC smaller in |
+|---|---:|---:|---:|---:|---:|---:|
+| realistic | +6.7 ± 0.7 | −0.2 ± 0.7 | −2.5 ± 0.5 | −3.3 ± 0.4 | −2.6 ± 0.2 | 13 of 40 runs |
+| random | +3.5 ± 0.6 | −5.9 ± 0.2 | −6.9 ± 0.2 | −7.1 ± 0.2 | −8.4 ± 0.1 | 5 of 40 runs |
+| scoped | +5.6 ± 0.4 | −1.1 ± 0.9 | −0.8 ± 0.2 | +0.1 ± 0.3 | +0.8 ± 0.1 | 24 of 40 runs |
+
+The spread between seeds (≤ 1 point) is far smaller than the differences being
+reported, so none of the conclusions depends on the particular symbols drawn.
 
 ## 4. Speed (`bench_results.csv`, Linux/glibc, -O2, n = 1000, ns per operation)
 
@@ -128,7 +141,6 @@ the trie moves that to 74.2–78.8%. The honest framing of the claim is:
 - **64-bit host only.** Every figure assumes 8-byte pointers and 16-byte malloc headers. On a 32-bit target both halve, so the arena's advantage shrinks. The code is ready for it: `MALLOC_OVERHEAD` derives from `sizeof(void *)`; install `gcc-multilib` and run `CC="gcc -m32" OUT=results_32bit.csv ./run_sweep.sh`.
 - **Corpus is desktop libraries, not firmware.** An embedded corpus (Zephyr, FreeRTOS, vendor HALs) would test the motivating use case directly; it needs those sources downloaded.
 - **Baseline uses a fixed 64-bucket table** (as the prototype did). At n = 1000 its chains are long, so its lookups are slower than a resizing hash table's would be; a resizing table would also grow its bucket array, so its memory would rise.
-- **Synthetic sweep uses one seed.** `SEEDS="1 2 3 4 5" ./run_sweep.sh` averages several; the corpus results do not depend on a seed.
 - **Raw mode is not preprocessed**, so macros and `#include`d names are missing from those tables; the preprocessed mode covers that.
 
 ## 8. Reproduce
