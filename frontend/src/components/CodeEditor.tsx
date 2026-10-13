@@ -1,6 +1,6 @@
 import React from 'react';
-import { Play, RotateCcw, Trash2, FileCode, CheckCircle2 } from 'lucide-react';
-import { SAMPLE_PRESETS } from '../data/sampleCodes';
+import { Play, RotateCcw, Trash2, FileCode, CheckCircle2, Code2 } from 'lucide-react';
+import { SAMPLE_PRESETS, CUSTOM_PRESET } from '../data/sampleCodes';
 import type { SamplePreset } from '../data/sampleCodes';
 
 interface CodeEditorProps {
@@ -8,6 +8,7 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   onAnalyze: () => void;
   isLoading: boolean;
+  loadingStep?: string;
   selectedPresetId: string;
   onSelectPreset: (preset: SamplePreset) => void;
 }
@@ -19,6 +20,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   onChange,
   onAnalyze,
   isLoading,
+  loadingStep,
   selectedPresetId,
   onSelectPreset,
 }) => {
@@ -28,6 +30,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const handleClear = () => {
     onChange('');
+    onSelectPreset(CUSTOM_PRESET);
   };
 
   const handleReset = () => {
@@ -35,20 +38,31 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     onSelectPreset(defaultPreset);
   };
 
+  const handleTextChange = (newCode: string) => {
+    onChange(newCode);
+    // If the edited code doesn't match the current preset, automatically switch to custom
+    const matchingPreset = SAMPLE_PRESETS.find((p) => p.code.trim() === newCode.trim());
+    if (!matchingPreset && selectedPresetId !== 'custom') {
+      onSelectPreset(CUSTOM_PRESET);
+    }
+  };
+
+  const activePreset = SAMPLE_PRESETS.find((p) => p.id === selectedPresetId) || CUSTOM_PRESET;
+
   return (
-    <div className="flex flex-col h-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+    <div className="flex flex-col h-full rounded-xl border-2 border-slate-300 bg-white overflow-hidden shadow-xs">
       {/* Top Header Bar */}
-      <div className="px-4 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
+      <div className="px-4 py-3 border-b-2 border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-2">
-          <FileCode className="w-4 h-4 text-teal-700" />
-          <span className="text-sm font-semibold text-slate-900">C Source Input</span>
-          <span className="text-xs text-slate-500 font-mono">({lineCount} lines)</span>
+          <FileCode className="w-4 h-4 text-teal-800" />
+          <span className="text-sm font-bold text-slate-900 tracking-tight">C Source Editor</span>
+          <span className="text-xs text-slate-600 font-mono font-bold">({lineCount} lines)</span>
         </div>
 
         {/* Preset Selector */}
         <div className="flex items-center space-x-2">
-          <label htmlFor="preset-select" className="text-xs text-slate-600 hidden sm:inline">
-            Preset:
+          <label htmlFor="preset-select" className="text-xs text-slate-700 font-bold hidden sm:inline">
+            Source Preset:
           </label>
           <select
             id="preset-select"
@@ -57,7 +71,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               const p = SAMPLE_PRESETS.find((preset) => preset.id === e.target.value);
               if (p) onSelectPreset(p);
             }}
-            className="text-xs bg-slate-50 border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-600 focus:border-teal-600 font-medium"
+            className="text-xs bg-white border-2 border-slate-300 text-slate-900 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-700 font-bold shadow-2xs"
           >
             {SAMPLE_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -69,22 +83,23 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Preset Details / Description pill */}
-      {selectedPresetId && (
-        <div className="px-4 py-2 bg-teal-50/40 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
-          <span className="truncate">
-            {SAMPLE_PRESETS.find((p) => p.id === selectedPresetId)?.description}
-          </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-teal-100 text-teal-800 border border-teal-200 shrink-0 ml-2">
-            {SAMPLE_PRESETS.find((p) => p.id === selectedPresetId)?.badge}
-          </span>
+      <div className="px-4 py-2 bg-teal-50/60 border-b border-teal-200 flex items-center justify-between text-xs text-slate-700 font-medium">
+        <div className="flex items-center space-x-2 truncate pr-2">
+          {selectedPresetId === 'custom' ? (
+            <Code2 className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+          ) : null}
+          <span className="truncate">{activePreset.description}</span>
         </div>
-      )}
+        <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-teal-100 text-teal-900 border border-teal-300 shrink-0 ml-2">
+          {activePreset.badge}
+        </span>
+      </div>
 
       {/* Code Textarea with Line Numbers */}
       <div className="relative flex-1 min-h-[360px] flex bg-white font-mono text-xs sm:text-sm">
         {/* Line Numbers Sidebar */}
-        <div className="py-4 pl-3 pr-2 select-none text-right text-slate-400 bg-slate-50 border-r border-slate-200 min-w-[44px]">
-          {Array.from({ length: Math.max(lineCount, 15) }).map((_, i) => (
+        <div className="py-4 pl-3 pr-2.5 select-none text-right text-slate-500 font-bold bg-slate-50 border-r-2 border-slate-200 min-w-[46px]">
+          {Array.from({ length: Math.max(lineCount, 18) }).map((_, i) => (
             <div key={i} className="leading-6 text-[11px]">
               {i + 1}
             </div>
@@ -94,40 +109,44 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         {/* Text Input */}
         <textarea
           value={code}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="// Paste or write C code declarations here...
+          onChange={(e) => handleTextChange(e.target.value)}
+          placeholder="// Paste or write your own C code declarations, structs, and functions here...
 int sensor_temp;
 int sensor_press;
-void system_init() {
-    int local_counter;
+struct MotorState {
+    int rpm;
+    float current;
+};
+void system_init(int bus_rate) {
+    int local_counter = 0;
 }"
-          className="w-full h-full p-4 bg-white text-slate-900 focus:outline-none resize-none leading-6 font-mono placeholder:text-slate-400"
+          className="w-full h-full p-4 bg-white text-slate-900 focus:outline-none resize-none leading-6 font-mono font-medium placeholder:text-slate-400"
           spellCheck={false}
         />
       </div>
 
       {/* Bottom Action Footer */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+      <div className="p-3 border-t-2 border-slate-200 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center space-x-2">
           {/* Byte size indicator */}
           <div
-            className={`text-xs px-2.5 py-1 rounded-md font-mono flex items-center space-x-1 border ${
+            className={`text-xs px-2.5 py-1.5 rounded-md font-mono font-bold flex items-center space-x-1 border ${
               isOversized
-                ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold'
+                ? 'bg-rose-50 text-rose-800 border-rose-300'
                 : byteCount > 32 * 1024
-                ? 'bg-amber-50 text-amber-800 border-amber-300'
-                : 'bg-white text-slate-700 border-slate-200 shadow-2xs'
+                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                : 'bg-white text-slate-800 border-slate-300 shadow-2xs'
             }`}
           >
             <span>{byteCount.toLocaleString()} / 65,536 B</span>
-            {!isOversized && <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 ml-1" />}
+            {!isOversized && <CheckCircle2 className="w-3.5 h-3.5 text-teal-700 ml-1" />}
           </div>
 
           <button
             type="button"
             onClick={handleReset}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors"
-            title="Reset to Prototype 30"
+            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors border border-slate-200 shadow-2xs"
+            title="Reset to Benchmark Preset"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -135,22 +154,22 @@ void system_init() {
           <button
             type="button"
             onClick={handleClear}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            title="Clear Code"
+            className="p-2 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition-colors border border-slate-200 shadow-2xs"
+            title="Clear and write custom code"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Analyze Button (Primary Orange CTA) */}
+        {/* Analyze Button (Primary Orange CTA with visible progress state) */}
         <button
           type="button"
           onClick={onAnalyze}
           disabled={isLoading || isOversized || code.trim().length === 0}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 transition-all shadow-xs ${
+          className={`px-6 py-2.5 rounded-lg text-sm font-extrabold flex items-center space-x-2 transition-all shadow-xs ${
             isLoading || isOversized || code.trim().length === 0
               ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-              : 'bg-orange-600 hover:bg-orange-700 text-white active:scale-[0.98]'
+              : 'bg-orange-600 hover:bg-orange-700 text-white active:translate-y-px'
           }`}
         >
           {isLoading ? (
@@ -159,7 +178,7 @@ void system_init() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Analyzing...</span>
+              <span>{loadingStep || 'Analyzing Symbol Table...'}</span>
             </>
           ) : (
             <>
