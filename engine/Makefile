@@ -29,7 +29,7 @@ bench: symtab_bench.c symtab_common.h symtab_workloads.h $(addsuffix .c,$(ALL))
 	./symtab_bench | tee bench_results.csv
 
 syntax_bench: syntax_table_compress.c syntax_table.h
-	$(CC) $(CFLAGS) -DSYNTAX_BENCH_CLI -o $@ syntax_table_compress.c
+	$(CC) $(CFLAGS) -DSYNTAX_BENCH_CLI -o $@ syntax_table_compress.c -lm
 
 # Testing standard: verify under sanitizers, then measure.
 check:

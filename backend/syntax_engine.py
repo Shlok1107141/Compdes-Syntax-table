@@ -31,7 +31,7 @@ def syntax_engine_path() -> Path:
     if not path.is_file():
         # Try compiling on the fly if gcc is available
         try:
-            cmd = ["gcc", "-std=c11", "-O2", "-Wall", "-Wextra", "-DSYNTAX_BENCH_CLI", "syntax_table_compress.c", "-o", BINARY_NAME]
+            cmd = ["gcc", "-std=c11", "-O2", "-Wall", "-Wextra", "-DSYNTAX_BENCH_CLI", "syntax_table_compress.c", "-o", BINARY_NAME, "-lm"]
             subprocess.run(cmd, cwd=str(ENGINE_DIR), check=True, capture_output=True)
         except Exception:
             pass
