@@ -7,14 +7,12 @@
 6. Scalability and robustness across diverse grammar inputs.
 """
 
-import pytest
 import asyncio
 from syntax_engine import run_syntax_benchmarks
 
 
-@pytest.mark.asyncio
-async def test_syntax_table_benchmark_suite():
-    data = await run_syntax_benchmarks()
+def test_syntax_table_benchmark_suite():
+    data = asyncio.run(run_syntax_benchmarks())
     assert "benchmarks" in data
     benchmarks = data["benchmarks"]
     assert len(benchmarks) > 0
@@ -60,9 +58,8 @@ async def test_syntax_table_benchmark_suite():
         assert 0.0 <= b["sparsity_pct"] <= 100.0
 
 
-@pytest.mark.asyncio
-async def test_row_displacement_vs_raw():
-    data = await run_syntax_benchmarks()
+def test_row_displacement_vs_raw():
+    data = asyncio.run(run_syntax_benchmarks())
     benchmarks = data["benchmarks"]
 
     # For sparse grammars (like C or SQL), row displacement should achieve substantial savings
@@ -77,3 +74,12 @@ async def test_row_displacement_vs_raw():
     assert disp["total_compressed_bytes"] < raw["raw_bytes"]
     assert disp["savings_pct"] > 50.0  # At 95%+ sparsity, savings exceed 50%
     assert disp["correctness_verified"] is True
+
+
+def test_syntax_table_api_endpoint(client):
+    response = client.get("/syntax-table/benchmark")
+    assert response.status_code == 200
+    data = response.json()
+    assert "benchmarks" in data
+    assert len(data["benchmarks"]) > 0
+
