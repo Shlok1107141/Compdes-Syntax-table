@@ -153,62 +153,13 @@ $$\min \left( M_{\text{compressed}} \right) \quad \text{subject to} \quad \text{
 
 Figure 1 illustrates the end-to-end multi-tier architecture of DenseSym, highlighting the clear separation of responsibilities across the C execution engine, the sandboxed FastAPI backend, and the interactive React frontend.
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    FIGURE 1: DENSESYM ARCHITECTURE                                 |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|   +--------------------------------------------------------------------------------------------+   |
-|   |                       TIER 3: REACT 19 + VITE INTERACTIVE FRONTEND                         |   |
-|   |  - Monospace Code Input Panel (Real-Time Line Numbers, 64 KB Payload Ceiling Indicator)     |   |
-|   |  - Live Metrics Dashboard (75.4% Hero Savings, 4.07x Density Multiplier, Side-by-Side Cards) |   |
-|   |  - 7-Configuration Ablation Comparative Bar Chart (Trie, Arena, Bitpack, Pairwise Models)  |   |
-|   |  - Searchable Symbol Table (Bit-Packed 32-bit Hex/Binary Word Inspector, JSON Export)       |   |
-|   |  - Interactive Radix Patricia Trie Visualizer (Shared Edges, 16-Bit Arena Index Badges)    |   |
-|   +----------------------------------------------+---------------------------------------------+   |
-|                                                  | HTTP POST /analyze (Locked JSON Contract)       |
-|                                                  v                                                 |
-|   +--------------------------------------------------------------------------------------------+   |
-|   |                           TIER 2: FASTAPI SANDBOXED BACKEND SERVICE                        |   |
-|   |  - CORS Security Policy & Rate Limiter (Restricted Origin Lockdown)                        |   |
-|   |  - Request Body Validator (Hard 64 KB String Size Ceiling, 413 Payload Too Large)          |   |
-|   |  - Unprivileged Subprocess Harness (2.0s Hard Execution Timeout, POSIX Memory Rlimit)       |   |
-|   |  - Parse-Only Static Execution Guarantee (Source code never compiled or executed natively) |   |
-|   +----------------------------------------------+---------------------------------------------+   |
-|                                                  | Standard Streams / Pipes                        |
-|                                                  v                                                 |
-|   +--------------------------------------------------------------------------------------------+   |
-|   |                          TIER 1: HIGH-EFFICIENCY C COMPILATION ENGINE                      |   |
-|   |                                                                                            |   |
-|   |   +--------------------------+  Tokens   +--------------------------+                      |   |
-|   |   |   LEXER & TOKEN SCANNER  | --------> |   NESTED SCOPE TRACKER   |                      |   |
-|   |   | (Keyword/ID/Pointer/Func)|           | ({ / } Depth, Relative +)|                      |   |
-|   |   +--------------------------+           +------------+-------------+                      |   |
-|   |                                                       |                                        |   |
-|   |                                                       v Identifiers & Scopes                   |   |
-|   |   +------------------------------------------------------------------------------------+   |   |
-|   |   |                       TRI-TIER COMPRESSION STORAGE SUBSYSTEM                       |   |   |
-|   |   |                                                                                    |   |   |
-|   |   |   [TECHNIQUE 1: PATRICIA RADIX TRIE]                                               |   |   |
-|   |   |   - Edges store common prefix substrings (No duplicate string buffers)             |   |   |
-|   |   |   - Automatic edge splitting and prefix compaction                                 |   |   |
-|   |   |                                                                                    |   |   |
-|   |   |   [TECHNIQUE 2: 16-BIT ARENA INDEX ADDRESSING]                                     |   |   |
-|   |   |   - Flat pre-allocated contiguous array buffer                                     |   |   |
-|   |   |   - uint16_t relative offsets replace 8-byte 64-bit platform pointers              |   |   |
-|   |   |   - Zero dynamic malloc() chunk header overhead                                    |   |   |
-|   |   |                                                                                    |   |   |
-|   |   |   [TECHNIQUE 3: ATOMIC 32-BIT METADATA BIT-PACKING]                                |   |   |
-|   |   |   - Single uint32_t word: [Type: 4b][Scope: 8b][Class: 4b][Offset: 16b]            |   |   |
-|   |   |   - Eliminates compiler struct alignment padding (10 B/node vs 32 B baseline)      |   |   |
-|   |   +------------------------------------------------------------------------------------+   |   |
-|   +--------------------------------------------------------------------------------------------+   |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 1](docs/figures/fig1-architecture.png)
+
+*Figure 1. DenseSym architecture. The React frontend (Tier 3) sends `POST /analyze` to the FastAPI backend (Tier 2), which bounds the request and runs the C analyzer (Tier 1) as a sandboxed child process. The analyzer lexes and parses the source, builds and verifies all eight symbol-table structures, and returns one JSON object.*
 
 As illustrated in Figure 1, the system operates across three strictly decoupled architectural tiers:
 1. **Tier 1 (Core C Engine)**: Built in pure C11 and compiled with `-Wall -Wextra -Werror -pedantic -fsanitize=address,undefined`. The engine tokenizes raw source text, tracks lexical scopes, inserts keys into the Patricia trie, packs metadata words, and writes JSON metrics to standard output.
-2. **Tier 2 (FastAPI Sandboxed Backend)**: Wraps the compiled C engine binary using Python 3.11 `subprocess.run`. It enforces an unprivileged execution sandbox with a 2.0-second execution timeout, a 64 KB request payload cap, and strict parse-only static analysis guarantees, safeguarding the host operating system against malicious code injection.
+2. **Tier 2 (FastAPI Sandboxed Backend)**: Wraps the compiled C engine binary using Python 3.11 `subprocess.run`. It enforces an unprivileged execution sandbox with a 5-second execution timeout, a 64 KB request payload cap, and strict parse-only static analysis guarantees, safeguarding the host operating system against malicious code injection.
 3. **Tier 3 (React 19 Frontend)**: A high-responsiveness web application engineered with TypeScript, Vite, and Tailwind CSS v4. It features a dual-mode execution switch (Live API vs. Simulated Engine), an interactive Radix Trie graph visualizer, a 7-configuration ablation comparison bar chart, and a bit-packed 32-bit word inspector.
 
 ---
@@ -217,58 +168,9 @@ As illustrated in Figure 1, the system operates across three strictly decoupled 
 
 Figure 2 depicts the end-to-end procedural workflow of DenseSym during symbol processing.
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                FIGURE 2: PROCEDURAL FLOW DIAGRAM                                   |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|    [User Input C Code] ---> (Validate Size <= 64 KB) --[Fail]--> [Return HTTP 413 Payload Too Large]
-|                                   |                                                                |
-|                                 [Pass]                                                             |
-|                                   v                                                                |
-|                         [Spawn Sandboxed C Subprocess]                                             |
-|                                   |                                                                |
-|                                   v                                                                |
-|                       +-----------------------+                                                    |
-|                       |  Lexer & Scope Parser | <---+                                              |
-|                       +-----------+-----------+     | Next Token                                   |
-|                                   |                 |                                              |
-|                                   v                 |                                              |
-|                       [Classify Token Type]         |                                              |
-|                       - Keyword / Type Qualifier    |                                              |
-|                       - Scope Open '{' (Depth++)    |                                              |
-|                       - Scope Close '}' (Depth--)   |                                              |
-|                       - Variable / Function ID -----+                                              |
-|                                   |                                                                |
-|                                   v Identifier & Scope Detected                                    |
-|                       +-----------------------+                                                    |
-|                       | Radix Trie Insertion  |                                                    |
-|                       +-----------+-----------+                                                    |
-|                                   |                                                                |
-|                         (Edge Prefix Match?)                                                       |
-|                                  / \                                                               |
-|                        [Exact]  /   \  [Partial / Divergent]                                       |
-|                                v     v                                                             |
-|                   [Reuse Node]   [Split Edge & Allocate Node in Arena]                             |
-|                         \           /                                                              |
-|                          \         /                                                               |
-|                           v       v                                                                |
-|               +----------------------------------------+                                           |
-|               | Encode 32-Bit Bit-Packed Metadata Word |                                           |
-|               |  W = (offset<<16)|(class<<12)|...      |                                           |
-|               +-------------------+--------------------+                                           |
-|                                   |                                                                |
-|                                   v                                                                |
-|               [Write Symbol Record to Arena Array (6B)]                                            |
-|                                   |                                                                |
-|                                   v                                                                |
-|               [Compute Memory Footprint & Ablation Metrics]                                        |
-|                                   |                                                                |
-|                                   v                                                                |
-|               [Emit JSON Output to Backend & Render in UI]                                         |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 2](docs/figures/fig2-processing-flow.png)
+
+*Figure 2. Processing flow for one `POST /analyze` request, including the three ways a Patricia-trie insertion can match an existing edge and every rejection path with its HTTP status.*
 
 The system comprises four tightly integrated operational modules:
 1. **Lexical Analysis & Scope Tracking Module**: Parses token sequences, maintaining a lexical nesting counter $s \in [0, 255]$ updated deterministically on block delimiters `{` and `}`. When an identifier declaration is encountered, the module resolves its storage duration class $\sigma \in \{0=\text{local}, 1=\text{global}, 2=\text{static}, 3=\text{param}\}$ and assigns sequential memory alignment offsets $\omega$.
@@ -300,7 +202,7 @@ $$\eta_{\text{ptr}} = 1 - \frac{2 \cdot N \cdot \text{sizeof}(\text{uint16\_t})}
 
 #### Equation 5: Atomic 32-Bit Metadata Bit-Packing Encoding Function
 The mapping function $\mathcal{F}_{\text{pack}}: (\tau, s, \sigma, \omega) \to \mathbb{W}_{32}$ condensing semantic attributes into a single unsigned 32-bit word $W$ is strictly defined as:
-$$W = \left( (\omega \ \& \ \text{0xFFFF}) \ll 16 \right) \ \Big| \ \left( (\sigma \ \& \ \text{0x0F}) \ll 12 \right) \ \Big| \ \left( (s \ \& \ \text{0xFF}) \ll 4 \right) \ \Big| \ (\tau \ \& \ \text{0x0F}) \tag{5}$$
+$$W = \left( (\tau \ \& \ \text{0x0F}) \ll 28 \right) \ \Big| \ \left( (s \ \& \ \text{0xFF}) \ll 20 \right) \ \Big| \ \left( (\sigma \ \& \ \text{0x0F}) \ll 16 \right) \ \Big| \ (\omega \ \& \ \text{0xFFFF}) \tag{5}$$
 where $\tau \in [0, 15]$ represents the 4-bit type signature, $s \in [0, 255]$ represents the 8-bit scope depth, $\sigma \in [0, 15]$ represents the 4-bit storage class, and $\omega \in [0, 65535]$ represents the 16-bit struct/stack relative offset.
 
 #### Equation 6: Total Memory Savings Percentage
@@ -360,10 +262,10 @@ Algorithm 2: Bit-Packed Metadata Decoding and Scope Resolution
 Input: 32-bit packed word W, Symbol Table Arena Base Pointer B
 Output: Decoded Semantic Attribute Record R
 
-1:  R.type <- W & 0x0000000F
-2:  R.scope <- (W >> 4) & 0x000000FF
-3:  R.storage_class <- (W >> 12) & 0x0000000F
-4:  R.offset <- (W >> 16) & 0x0000FFFF
+1:  R.type <- (W >> 28) & 0x0000000F
+2:  R.scope <- (W >> 20) & 0x000000FF
+3:  R.storage_class <- (W >> 16) & 0x0000000F
+4:  R.offset <- W & 0x0000FFFF
 5:  
 6:  // Map numeric qualifiers to compiler symbol properties
 7:  switch R.storage_class do
@@ -380,75 +282,19 @@ Output: Decoded Semantic Attribute Record R
 ### 3.6 Structural Diagrams of Core Components
 
 #### Figure 3: Bit-Packed 32-Bit Metadata Word Bit Allocation
-```
-+----------------------------------------------------------------------------------------------------+
-|                       FIGURE 3: ATOMIC 32-BIT METADATA BIT ALLOCATION DIAGRAM                      |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|    Bit 31                                       Bit 16 Bit 15   Bit 12 Bit 11      Bit 4 Bit 3    Bit 0
-|   +---------------------------------------------------+---------------+-----------------+---------+
-|   |            Relative Memory Offset                 | Storage Class | Lexical Scope   | Datatype|
-|   |                   (16 Bits)                       |   (4 Bits)    |  Depth (8 Bits) | (4 Bits)|
-|   +---------------------------------------------------+---------------+-----------------+---------+
-|   | Range: 0 to 65,535 Bytes                          | 0=Local       | Depth: 0 to 255 | 0=Int   |
-|   | Resolves stack frame & struct offsets             | 1=Global      | Lexical nesting | 1=Char  |
-|   | without auxiliary pointer fields                  | 2=Static      | brace tracking  | 2=Ptr   |
-|   |                                                   | 3=Param       |                 | 3=Struct|
-|   +---------------------------------------------------+---------------+-----------------+---------+
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 3](docs/figures/fig3-metadata-word.png)
+
+*Figure 3. Bit allocation of the 32-bit metadata word as implemented by `pack_meta` in `engine/symtab_common.h`, with the type and storage-class codes used by the analyzer and a worked example (`int sensor_press;` packs to `0x00010004`).*
 
 #### Figure 4: Patricia Radix Trie vs. Separate Chaining Hash Table Comparison
-```
-+----------------------------------------------------------------------------------------------------+
-|                FIGURE 4: STRUCTURAL STORAGE COMPARISON: BASELINE VS. DENSESYM                      |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|   [BASELINE SEPARATE-CHAINING HASH TABLE]                                                          |
-|   Bucket [0] -> [ Node: 32B ] -(8B ptr)-> [ Node: 32B ]                                            |
-|                    |                         |                                                     |
-|                 (8B ptr)                  (8B ptr)                                                 |
-|                    v                         v                                                     |
-|               "sensor_temp"             "sensor_press"  <-- Duplicated Prefix Strings!             |
-|               (Separate Malloc)         (Separate Malloc)                                          |
-|                                                                                                    |
-|   ----------------------------------------------------------------------------------------------   |
-|                                                                                                    |
-|   [DENSESYM COMPACTED PATRICIA TRIE & 16-BIT ARENA]                                                |
-|                                                                                                    |
-|             arena[0] (ROOT)                                                                        |
-|                   |                                                                                |
-|          Edge: "sensor_"  (Shared Prefix interned once)                                            |
-|                   |                                                                                |
-|                   v                                                                                |
-|             arena[1] (Internal Node)                                                               |
-|            /                       \                                                               |
-|   Edge: "temp"           Edge: "press"                                                             |
-|          /                           \                                                             |
-|         v                             v                                                            |
-|   arena[2] (Leaf)               arena[3] (Leaf)                                                    |
-|   [Word: 0x00000010]            [Word: 0x00040010]                                                 |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 4](docs/figures/fig4-hash-vs-trie.png)
+
+*Figure 4. The same two declarations stored in the baseline chained hash table (665 B) and in DenseSym (64 B). The hash table stores the prefix `sensor_` twice; the trie stores it once on a shared edge. Both totals are measured by `engine/symtab_analyze`.*
 
 #### Figure 5: 16-Bit Arena Linear Storage Memory Layout
-```
-+----------------------------------------------------------------------------------------------------+
-|                           FIGURE 5: 16-BIT ARENA ARRAY MEMORY LAYOUT                               |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|   Contiguous Linear Pre-Allocated SRAM Buffer (Addressable via uint16_t offsets 0x0000 to 0xFFFF)  |
-|   +---------------+---------------+---------------+---------------+---------------+------------+   |
-|   | Trie Node 0   | Trie Node 1   | Trie Node 2   | String Pool   | Symbol Rec 0  | Symbol Rec |...|
-|   | (8 Bytes)     | (8 Bytes)     | (8 Bytes)     | ("sensor_...")| (6 Bytes)     | (6 Bytes)  |   |
-|   +---------------+---------------+---------------+---------------+---------------+------------+   |
-|   ^               ^               ^               ^               ^                                |
-|   Offset 0x0000   Offset 0x0008   Offset 0x0010   Offset 0x0018   Offset 0x0040                    |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 5](docs/figures/fig5-arena-layout.png)
+
+*Figure 5. DenseSym arena layout: four fixed pools addressed by 16-bit indices, shown with the real node, character and metadata contents for `int sensor_temp; int sensor_press;`.*
 
 ---
 
@@ -483,32 +329,11 @@ The backend integration was deployed using Python 3.11 with FastAPI 0.115 and Uv
 
 ### 4.2 Implementation Screenshot & Visual Interface
 
-Figure 6 provides an architectural layout of the live interactive web workbench developed by Sagnik Datta.
+Figure 6 is a screenshot of the live interactive web workbench developed by Sagnik Datta.
 
-```
-+----------------------------------------------------------------------------------------------------+
-|               FIGURE 6: DENSESYM INTERACTIVE WORKBENCH GRAPHICAL USER INTERFACE                     |
-+----------------------------------------------------------------------------------------------------+
-| [=] Compressed Symbol Table (BCSE307L)          [Simulated Mode] [Live Backend]  (GitHub @armoredglock)|
-+----------------------------------------------------------------------------------------------------+
-|  C SOURCE CODE INPUT (30 lines)                |  METRICS & ABLATION  | SYMBOL TABLE | RADIX TRIE  |
-|  --------------------------------------------  +---------------------------------------------------+
-|  1 | /* Embedded Sensor Node Firmware */       |  +--------------------+  +-----------------------+ |
-|  2 | int counter; int counter_max;             |  |  75.4% MEMORY SAVED|  | BASELINE: 2,725 Bytes | |
-|  3 | int counter_min; char temp;               |  |  4.07x Density Mult|  | COMPRESSED: 669 Bytes | |
-|  4 | char temp_max; char temp_min;             |  +--------------------+  +-----------------------+ |
-|  5 | int* temp_buffer; int sensor_id;          |                                                    |
-|  6 | int sensor_value; int led_pin;            |  ABLATION STUDY (7 CONFIGURATIONS VS BASELINE):    |
-|  7 | int led_state; char* buffer;              |  Trie Only (C)       : [================] 4035 B (+48%)
-|  8 | int buffer_size; char* buffer_ptr;        |  Baseline Hash Table : [===========     ] 2725 B (0%)  |
-|  9 | int status; int status_flag;              |  Trie + Bitpack (AC) : [===========     ] 2747 B (+1%) |
-| 10 | void counter_reset(void) { ... }          |  Bitpack Only (A)    : [==========      ] 2485 B (-9%) |
-|                                                |  Trie + Arena (BC)   : [====            ] 1029 B (-62%)|
-|  Preset: [Embedded Sensor (Demo 30) v]         |  Arena Only (B)      : [====            ] 1021 B (-63%)|
-|  Payload: [ 584 / 65,536 Bytes ]  (OK)         |  Arena + Bitpack(AB) : [===             ] 661 B (-76%) |
-|  [ Reset ] [ Clear ]  [ > Analyze Symbol Table]|  Full 3-in-1 (ABC)   : [===             ] 669 B (-75%) |
-+----------------------------------------------------------------------------------------------------+
-```
+![Figure 6](docs/figures/fig6-workbench.png)
+
+*Figure 6. The DenseSym interactive workbench (offline simulation mode) analysing the 30-identifier embedded sensor preset: 2,725 B baseline vs 669 B compressed, with all seven ablation configurations.*
 
 ---
 
