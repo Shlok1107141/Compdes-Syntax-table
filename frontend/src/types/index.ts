@@ -51,3 +51,37 @@ export interface HealthStatus {
   engineReady?: boolean;
   message?: string;
 }
+
+export interface SyntaxBenchmarkItem {
+  grammar: string;
+  category: string;
+  algorithm: string;
+  states: number;
+  tokens: number;
+  nnz: number;
+  sparsity_pct: number;
+  raw_bytes: number;
+  payload_bytes: number;
+  index_bytes: number;
+  side_structure_bytes: number;
+  decoder_code_bytes: number;
+  total_compressed_bytes: number;
+  compression_ratio: number;
+  savings_pct: number;
+  build_time_us: number;
+  mean_lookup_ns: number;
+  p99_lookup_ns: number;
+  max_lookup_ns: number;
+  peak_working_mem_bytes: number;
+  cache_miss_rate_pct: number;
+  avg_lines_touched: number;
+  correctness_verified: boolean;
+  verified_queries_count: number;
+  errors_correctly_detected: number;
+  default_reductions_applied: number;
+}
+
+export interface SyntaxBenchmarkResponse {
+  timestamp: number;
+  benchmarks: SyntaxBenchmarkItem[];
+}

@@ -84,6 +84,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Build syntax table engine
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -DSYNTAX_BENCH_CLI engine/syntax_table_compress.c -o engine/syntax_bench -lm
+
       - name: Run backend pytest suite
         if: hashFiles('backend/requirements.txt') != ''
         run: |

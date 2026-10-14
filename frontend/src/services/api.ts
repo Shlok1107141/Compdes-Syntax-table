@@ -1,6 +1,7 @@
-import type { AnalyzeRequest, AnalyzeResponse, ExecutionMode, HealthStatus, SymbolEntry, AblationData } from '../types';
+import type { AnalyzeRequest, AnalyzeResponse, ExecutionMode, HealthStatus, SymbolEntry, AblationData, SyntaxBenchmarkResponse } from '../types';
 import { SAMPLE_PRESETS } from '../data/sampleCodes';
 import sampleResults from '../data/sampleResults.json';
+import syntaxResults from '../data/syntaxResults.json';
 
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? '/api';
 const REQUEST_TIMEOUT_MS = 8000;
@@ -372,3 +373,29 @@ export async function analyzeCode(code: string, mode: ExecutionMode): Promise<An
     clearTimeout(timeoutId);
   }
 }
+
+/** Fetches full 6-pillar syntax table benchmark results across all grammars and algorithms. */
+export async function fetchSyntaxBenchmarks(): Promise<SyntaxBenchmarkResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/syntax-table/benchmark`, { signal: controller.signal });
+    } catch {
+      response = await fetch('http://localhost:8000/syntax-table/benchmark', { signal: controller.signal });
+    }
+
+    if (response.ok) {
+      return (await response.json()) as SyntaxBenchmarkResponse;
+    }
+  } catch {
+    // Backend offline: return offline precomputed benchmarks
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  return syntaxResults as unknown as SyntaxBenchmarkResponse;
+}
+
