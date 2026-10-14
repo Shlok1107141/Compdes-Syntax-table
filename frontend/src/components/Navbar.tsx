@@ -6,30 +6,68 @@ interface NavbarProps {
   mode: ExecutionMode;
   onToggleMode: (newMode: ExecutionMode) => void;
   isBackendAvailable: boolean | null;
+  activeTab?: 'symbol' | 'syntax';
+  onSelectTab?: (tab: 'symbol' | 'syntax') => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ mode, onToggleMode, isBackendAvailable }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  mode, 
+  onToggleMode, 
+  isBackendAvailable, 
+  activeTab = 'symbol', 
+  onSelectTab 
+}) => {
   return (
     <header className="border-b-2 border-slate-200 bg-white sticky top-0 z-50 shadow-2xs">
       <div className="max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand & Course */}
-        <div className="flex items-center space-x-3.5">
-          <div className="w-10 h-10 rounded-lg bg-teal-800 text-white flex items-center justify-center shadow-xs">
-            <Cpu className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2.5">
-              <span className="font-black text-slate-900 text-lg tracking-tight">
-                Compressed Symbol Table
-              </span>
-              <span className="hidden sm:inline-block px-2.5 py-0.5 text-xs font-bold rounded-md bg-teal-50 text-teal-900 border border-teal-300">
-                BCSE307L
-              </span>
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-lg bg-teal-800 text-white flex items-center justify-center shadow-xs">
+              <Cpu className="w-5 h-5 text-white" />
             </div>
-            <p className="text-xs text-slate-600 font-medium hidden sm:block">
-              Embedded Memory Optimization &bull; Patricia Trie &bull; 16-bit Arena &bull; Bit-Packed Word
-            </p>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-black text-slate-900 text-base sm:text-lg tracking-tight">
+                  Compiler Table Optimizer
+                </span>
+                <span className="hidden sm:inline-block px-2 py-0.2 text-xs font-bold rounded-md bg-teal-50 text-teal-900 border border-teal-300">
+                  BCSE307L
+                </span>
+              </div>
+            </div>
           </div>
+
+          {/* Tab Navigation */}
+          {onSelectTab && (
+            <div className="hidden md:flex items-center bg-slate-100 p-1 rounded-lg border border-slate-300 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => onSelectTab('symbol')}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  activeTab === 'symbol'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-300 font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Symbol Table (Trie/Arena)
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectTab('syntax')}
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center space-x-1.5 ${
+                  activeTab === 'syntax'
+                    ? 'bg-teal-800 text-white shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Syntax Table Suite</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] bg-orange-500 text-white font-extrabold uppercase">
+                  6-Pillar
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Controls & Badges */}

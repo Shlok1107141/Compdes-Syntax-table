@@ -205,3 +205,15 @@ async def analyze(payload: AnalyzeRequest, request: Request) -> AnalyzeResponse:
         ablation=result["ablation"],
         peak=result["peak"],
     )
+
+
+@app.get("/syntax-table/benchmark")
+async def get_syntax_table_benchmark() -> dict:
+    """Returns comprehensive 6-pillar benchmark data across parse table algorithms and grammars."""
+    from syntax_engine import SyntaxEngineError, run_syntax_benchmarks
+
+    try:
+        return await run_syntax_benchmarks()
+    except SyntaxEngineError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+

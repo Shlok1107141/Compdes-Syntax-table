@@ -4,6 +4,7 @@ import { CodeEditor } from './components/CodeEditor';
 import { MetricsDashboard } from './components/MetricsDashboard';
 import { SymbolTableView } from './components/SymbolTableView';
 import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
+import { SyntaxTableSuite } from './components/SyntaxTableSuite';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
@@ -12,6 +13,7 @@ import type { AnalyzeResponse, ExecutionMode } from './types';
 import { BarChart3, Hash, Network } from 'lucide-react';
 
 export function App() {
+  const [mainView, setMainView] = useState<'symbol' | 'syntax'>('symbol');
   const [code, setCode] = useState<string>(SAMPLE_PRESETS[0].code);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(SAMPLE_PRESETS[0].id);
   const [mode, setMode] = useState<ExecutionMode>('offline');
@@ -116,20 +118,52 @@ export function App() {
         mode={mode}
         onToggleMode={handleToggleMode}
         isBackendAvailable={isBackendAvailable}
+        activeTab={mainView}
+        onSelectTab={setMainView}
       />
+
+      {/* Mobile/Tablet Sub-Header Switcher */}
+      <div className="md:hidden flex items-center justify-center p-2.5 bg-slate-100 border-b border-slate-300 gap-2">
+        <button
+          type="button"
+          onClick={() => setMainView('symbol')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+            mainView === 'symbol'
+              ? 'bg-white text-slate-900 border border-slate-300 shadow-xs'
+              : 'text-slate-600'
+          }`}
+        >
+          Symbol Table
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainView('syntax')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+            mainView === 'syntax'
+              ? 'bg-teal-800 text-white shadow-xs'
+              : 'text-slate-600'
+          }`}
+        >
+          Syntax Table (6-Pillar)
+        </button>
+      </div>
 
       {/* Main Workspace Container (Expansive width for wide displays) */}
       <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Error / Status Alerts */}
-        <ErrorBanner
-          error={error}
-          onDismiss={() => setError(null)}
-          mode={mode}
-          onSwitchToOffline={() => handleToggleMode('offline')}
-        />
+        {mainView === 'syntax' ? (
+          <SyntaxTableSuite />
+        ) : (
+          <>
+            {/* Error / Status Alerts */}
+            <ErrorBanner
+              error={error}
+              onDismiss={() => setError(null)}
+              mode={mode}
+              onSwitchToOffline={() => handleToggleMode('offline')}
+            />
 
-        {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* 2-Column Responsive Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Code Editor Input (5 cols on lg, 4 on xl) */}
           <div className="lg:col-span-5 xl:col-span-4 h-[720px] xl:h-[780px]">
             <CodeEditor
@@ -219,6 +253,8 @@ export function App() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </main>
 
       {/* Footer */}

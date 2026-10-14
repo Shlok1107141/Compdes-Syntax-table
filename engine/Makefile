@@ -28,6 +28,9 @@ bench: symtab_bench.c symtab_common.h symtab_workloads.h $(addsuffix .c,$(ALL))
 	$(CC) $(CFLAGS) -DSYMTAB_NO_MAIN -o symtab_bench symtab_bench.c $(addsuffix .c,$(ALL))
 	./symtab_bench | tee bench_results.csv
 
+syntax_bench: syntax_table_compress.c syntax_table.h
+	$(CC) $(CFLAGS) -DSYNTAX_BENCH_CLI -o $@ syntax_table_compress.c
+
 # Testing standard: verify under sanitizers, then measure.
 check:
 	$(CC) $(SANFLAGS) -DSYMTAB_NO_MAIN -o symtab_analyze_san $(ANALYZE_SRCS)
@@ -35,6 +38,6 @@ check:
 	@echo "sanitizer check: clean"
 
 clean:
-	rm -f $(ALL) symtab_analyze symtab_analyze_san symtab_bench
+	rm -f $(ALL) symtab_analyze symtab_analyze_san symtab_bench syntax_bench syntax_bench.exe
 
-.PHONY: all run sweep bench check clean
+.PHONY: all run sweep bench syntax_bench check clean
