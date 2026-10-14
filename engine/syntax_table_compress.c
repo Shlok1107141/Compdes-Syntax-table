@@ -104,7 +104,7 @@ RawSyntaxTable *syntax_create_grammar(const char *name, int states, int tokens, 
     for (int s = 0; s < states; s++) {
         // Decide state category (e.g. shift-heavy, reduce-heavy, goto state)
         int state_kind = s % 4; 
-        int active_tokens_per_state = (int)round((1.0 - target_sparsity) * (double)tokens);
+        int active_tokens_per_state = (int)((1.0 - target_sparsity) * (double)tokens + 0.5);
         if (active_tokens_per_state < 1) active_tokens_per_state = 1;
 
         for (int a = 0; a < active_tokens_per_state; a++) {
