@@ -11,7 +11,6 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
   const [status, setStatus] = useState<HardwareStatusResponse | null>(null);
   const [telemetry, setTelemetry] = useState<HardwareAnalyzeResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [targetBoard, setTargetBoard] = useState<'esp32' | 'arduino'>('esp32');
   const [showGuide, setShowGuide] = useState<boolean>(false);
 
   const checkStatus = async () => {
@@ -49,40 +48,19 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-lg font-black text-slate-900">
-                  {targetBoard === 'esp32' ? 'ESP32 Bare-Metal Static Analyzer' : 'Arduino Uno (AVR ATmega328P) Analyzer'}
+                  ESP32 Bare-Metal Static Analyzer
                 </h2>
                 <span className="px-2.5 py-0.5 text-xs font-black uppercase rounded-full bg-emerald-100 text-emerald-800 border-2 border-emerald-300">
                   {status ? `Hardware: ${status.port} (${status.status})` : 'Active Hardware: COM6'}
                 </span>
               </div>
               <p className="text-xs font-semibold text-slate-600 mt-0.5">
-                {status?.description || 'Silicon Labs CP210x USB-to-UART Bridge'} &bull; 115,200 baud &bull; Pure Embedded C11 Arena Engine
+                {status?.description || 'Silicon Labs CP210x USB-to-UART Bridge'} &bull; 115,200 baud &bull; Xtensa 240 MHz &bull; Pure Embedded C11 Arena Engine
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="flex bg-slate-100 p-1 rounded-lg border-2 border-slate-300 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setTargetBoard('esp32')}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  targetBoard === 'esp32' ? 'bg-teal-800 text-white shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                ESP32 (320 KB)
-              </button>
-              <button
-                type="button"
-                onClick={() => setTargetBoard('arduino')}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  targetBoard === 'arduino' ? 'bg-teal-800 text-white shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Arduino Uno (2 KB)
-              </button>
-            </div>
-
             <button
               type="button"
               onClick={handleRunAnalysis}
@@ -97,7 +75,7 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
               ) : (
                 <>
                   <Zap className="w-4 h-4 text-white fill-white" />
-                  <span>Analyze on Hardware</span>
+                  <span>Analyze on ESP32</span>
                 </>
               )}
             </button>
@@ -146,10 +124,10 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
             <Cpu className="w-4 h-4 text-teal-700" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {targetBoard === 'esp32' ? '240 MHz' : '16 MHz'}
+            {status?.clock_mhz ? `${status.clock_mhz} MHz` : '240 MHz'}
           </div>
           <div className="text-xs font-semibold text-slate-600 mt-1">
-            {targetBoard === 'esp32' ? 'Xtensa 32-bit Dual-Core LX6' : 'Microchip AVR 8-bit RISC'}
+            Xtensa 32-bit Dual-Core LX6
           </div>
         </div>
 
@@ -160,10 +138,10 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
             <HardDrive className="w-4 h-4 text-teal-700" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {targetBoard === 'esp32' ? '320 KB' : '2,048 Bytes'}
+            320 KB
           </div>
           <div className="text-xs font-semibold text-slate-600 mt-1">
-            {targetBoard === 'esp32' ? 'Free SRAM: ~298 KB' : 'Extreme Memory Constraint'}
+            Free SRAM: {status?.free_heap ? `${(status.free_heap / 1024).toFixed(1)} KB` : '~229 KB'}
           </div>
         </div>
 
@@ -174,10 +152,10 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
             <Layers className="w-4 h-4 text-orange-600" />
           </div>
           <div className="text-2xl font-black text-teal-800">
-            {telemetry ? `${telemetry.metrics.compressed_bytes} B` : (targetBoard === 'esp32' ? '578 B' : '642 B')}
+            {telemetry ? `${telemetry.metrics.compressed_bytes} B` : '587 B'}
           </div>
           <div className="text-xs font-bold text-orange-700 mt-1">
-            {telemetry ? `${telemetry.metrics.savings_pct.toFixed(1)}% savings vs hash table` : '75.0% memory reduction'}
+            {telemetry ? `${telemetry.metrics.savings_pct.toFixed(1)}% savings vs hash table` : '62.3% memory reduction'}
           </div>
         </div>
 
@@ -188,7 +166,7 @@ export const HardwareTelemetry: React.FC<HardwareTelemetryProps> = ({ currentCod
             <Zap className="w-4 h-4 text-orange-600" />
           </div>
           <div className="text-2xl font-black text-orange-600">
-            {telemetry ? `${telemetry.metrics.exec_time_us} μs` : (targetBoard === 'esp32' ? '48 μs' : '312 μs')}
+            {telemetry ? `${telemetry.metrics.exec_time_us} μs` : '365 μs'}
           </div>
           <div className="text-xs font-semibold text-slate-600 mt-1">
             Hardware timer (esp_timer_get_time)
