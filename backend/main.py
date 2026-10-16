@@ -17,6 +17,8 @@ import os
 import time
 from collections import defaultdict, deque
 
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -216,4 +218,26 @@ async def get_syntax_table_benchmark() -> dict:
         return await run_syntax_benchmarks()
     except SyntaxEngineError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+
+
+class HardwareAnalyzePayload(BaseModel):
+    code: Optional[str] = Field(default=None, description="C code snippet to analyze on ESP32")
+    port: str = Field(default="COM6", description="Serial COM port")
+
+
+@app.get("/hardware/status")
+async def get_hardware_telemetry_status(port: str = "COM6") -> dict:
+    """Probes physical ESP32 on the specified COM port and checks firmware beacon."""
+    from hardware_bridge import get_hardware_status
+
+    return get_hardware_status(port=port)
+
+
+@app.post("/hardware/analyze")
+async def post_hardware_analyze(payload: HardwareAnalyzePayload) -> dict:
+    """Streams C code to physical ESP32 over serial and returns live hardware metrics."""
+    from hardware_bridge import analyze_code_on_esp32
+
+    return analyze_code_on_esp32(code=payload.code, port=payload.port)
+
 

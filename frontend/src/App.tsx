@@ -5,6 +5,7 @@ import { MetricsDashboard } from './components/MetricsDashboard';
 import { SymbolTableView } from './components/SymbolTableView';
 import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
 import { SyntaxTableSuite } from './components/SyntaxTableSuite';
+import { HardwareTelemetry } from './components/HardwareTelemetry';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
@@ -13,7 +14,7 @@ import type { AnalyzeResponse, ExecutionMode } from './types';
 import { BarChart3, Hash, Network } from 'lucide-react';
 
 export function App() {
-  const [mainView, setMainView] = useState<'symbol' | 'syntax'>('symbol');
+  const [mainView, setMainView] = useState<'symbol' | 'syntax' | 'hardware'>('symbol');
   const [code, setCode] = useState<string>(SAMPLE_PRESETS[0].code);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(SAMPLE_PRESETS[0].id);
   const [mode, setMode] = useState<ExecutionMode>('offline');
@@ -144,7 +145,18 @@ export function App() {
               : 'text-slate-600'
           }`}
         >
-          Syntax Table (6-Pillar)
+          Syntax Suite
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainView('hardware')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+            mainView === 'hardware'
+              ? 'bg-teal-800 text-white shadow-xs'
+              : 'text-slate-600'
+          }`}
+        >
+          Hardware (COM6)
         </button>
       </div>
 
@@ -152,6 +164,8 @@ export function App() {
       <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {mainView === 'syntax' ? (
           <SyntaxTableSuite />
+        ) : mainView === 'hardware' ? (
+          <HardwareTelemetry currentCode={code} />
         ) : (
           <>
             {/* Error / Status Alerts */}

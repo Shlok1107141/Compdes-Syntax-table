@@ -85,3 +85,42 @@ export interface SyntaxBenchmarkResponse {
   timestamp: number;
   benchmarks: SyntaxBenchmarkItem[];
 }
+
+export interface HardwareStatusResponse {
+  status: 'ONLINE' | 'CONNECTED_READY_TO_FLASH' | 'DISCONNECTED' | 'ERROR';
+  port: string;
+  board?: string;
+  clock_mhz?: number;
+  free_heap?: number;
+  description?: string;
+  detail?: string;
+}
+
+export interface HardwareAnalyzeResponse {
+  status: string;
+  hardware: {
+    board: string;
+    soc: string;
+    cpu_mhz: number;
+    free_heap_bytes: number;
+    heap_delta_bytes: number;
+  };
+  metrics: {
+    mode: string;
+    symbol_count: number;
+    trie_nodes: number;
+    char_pool_bytes: number;
+    compressed_bytes: number;
+    baseline_bytes: number;
+    savings_pct: number;
+    exec_time_us: number;
+  };
+  symbols: Array<{
+    name: string;
+    type: string;
+    scope: number;
+    offset: number;
+    packed_word: string;
+  }>;
+}
+
