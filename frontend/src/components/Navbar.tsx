@@ -6,8 +6,8 @@ interface NavbarProps {
   mode: ExecutionMode;
   onToggleMode: (newMode: ExecutionMode) => void;
   isBackendAvailable: boolean | null;
-  activeTab?: 'symbol' | 'syntax';
-  onSelectTab?: (tab: 'symbol' | 'syntax') => void;
+  activeTab?: 'symbol' | 'syntax' | 'hardware';
+  onSelectTab?: (tab: 'symbol' | 'syntax' | 'hardware') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -64,6 +64,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Syntax Table Suite</span>
                 <span className="px-1.5 py-0.2 rounded text-[10px] bg-orange-500 text-white font-extrabold uppercase">
                   6-Pillar
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectTab('hardware')}
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center space-x-1.5 ${
+                  activeTab === 'hardware'
+                    ? 'bg-teal-800 text-white shadow-xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Hardware (ESP32 / AVR)</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-600 text-white font-extrabold uppercase">
+                  COM6
                 </span>
               </button>
             </div>
