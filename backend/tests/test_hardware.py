@@ -1,12 +1,9 @@
-import pytest
-from fastapi.testclient import TestClient
+from __future__ import annotations
 
-from backend.main import app
-
-client = TestClient(app)
+import main
 
 
-def test_hardware_status_endpoint():
+def test_hardware_status_endpoint(client):
     response = client.get("/hardware/status?port=COM6")
     assert response.status_code == 200
     data = response.json()
@@ -15,7 +12,7 @@ def test_hardware_status_endpoint():
     assert data["port"] == "COM6"
 
 
-def test_hardware_analyze_endpoint():
+def test_hardware_analyze_endpoint(client):
     response = client.post("/hardware/analyze", json={"code": "int a = 1;", "port": "COM6"})
     assert response.status_code == 200
     data = response.json()
