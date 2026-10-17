@@ -24,5 +24,8 @@ node_modules/
 dist/
 build/
 
-# OS
+# OS & IDE
 .DS_Store
+.vscode/
+.pio/
+
