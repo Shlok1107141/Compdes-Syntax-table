@@ -58,7 +58,25 @@ Since you already have PlatformIO installed in VS Code:
 
 ---
 
+## 📏 Arduino Uno: measured benchmark (`firmware/uno_bench/`)
+
+Runs the engine's own eight structures (baseline, A, B, C, AB, AC, BC, ABC)
+on an ATmega328P, one structure per firmware build, and measures memory,
+speed, capacity and EEPROM persistence. Results and how to read them:
+[`results/HARDWARE_RESULTS.md`](results/HARDWARE_RESULTS.md).
+
+* **Arduino IDE:** open `firmware/uno_bench/uno_bench.ino`, board *Arduino Uno*,
+  upload, Serial Monitor at 115200 baud with *Newline*, send `ALL`. The structure
+  is chosen by `BENCH_VARIANT` in `src/symtab_target.h` (7 = ABC).
+* **All eight, written to `firmware/results/`:** `python firmware/tools/collect.py --port COM3`
+  then `python firmware/tools/summarize_uno.py` for the tables.
+* `src/` holds a copy of `engine/` (`python firmware/tools/sync_engine.py`; CI checks
+  it is identical) and generated symbol sets (`python firmware/tools/gen_workloads.py`).
+
 ## 📟 Arduino Uno Deployment (`firmware/arduino/arduino.ino`)
+
+The figures in this older sketch's header and output are computed from a
+formula, not measured; use `firmware/uno_bench/` for measured numbers.
 
 For demonstrating the 2 KB AVR constraint:
 1. Open `firmware/arduino/arduino.ino` in Arduino IDE.

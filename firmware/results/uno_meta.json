@@ -1,0 +1,8 @@
+{
+  "board": "Arduino Uno compatible (ATmega328P, CH340 USB-serial, Optiboot)",
+  "fqbn": "arduino:avr:uno",
+  "core": "arduino:avr 1.8.7",
+  "arduino_cli": "arduino-cli  Version: 1.4.1 Commit: e39419312 Date: 2026-01-19T16:12:56Z",
+  "git_commit": "f70d5c741c271fe55d4c5af5c6fb386a50afd28a",
+  "date": "2026-10-26T22:10:23"
+}

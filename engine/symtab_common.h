@@ -20,7 +20,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <sys/types.h>
+
+/* A microcontroller build (firmware/uno_bench) keeps a symtab_target.h next to
+ * its copy of this header to shrink the arenas to the chip's RAM. Host builds
+ * have no such file and use the defaults below. */
+#if defined(__has_include)
+#if __has_include("symtab_target.h")
+#include "symtab_target.h"
+#endif
+#endif
 
 /* ---------- symbol record ---------- */
 typedef struct {
@@ -53,13 +61,34 @@ extern const Impl a_impl, b_impl, c_impl, ab_impl, ac_impl, bc_impl, abc_impl;
  * A use resolves to the first one whose scope is still open. */
 size_t abc_declarations(const char *name, uint16_t *out, size_t max);
 
+/* Persist the compressed (ABC) table. Its arenas hold 16-bit indices, never
+ * addresses, so the used part of each array is written out byte for byte and
+ * read back as is: no re-insertion. abc_save returns the bytes written;
+ * abc_load returns 0, or -1 if the stored counts do not fit this build. */
+size_t abc_save(void (*put)(const void *p, size_t n));
+int    abc_load(void (*get)(void *p, size_t n));
+
 /* ---------- arena limits ----------
  * Arena variants address nodes, characters and metadata with uint16_t, and
  * reserve 0xFFFF as the NIL index. These are hard limits of the technique,
- * not tuning knobs: inserts past them fail rather than wrap. */
+ * not tuning knobs: inserts past them fail rather than wrap. A target with
+ * little RAM may set smaller pools (see symtab_target.h above). */
 #define NIL              0xFFFF
+#ifndef ARENA_MAX_ITEMS
 #define ARENA_MAX_ITEMS  0xFFFFu    /* usable indices 0 .. 0xFFFE */
+#endif
+#ifndef ARENA_MAX_CHARS
 #define ARENA_MAX_CHARS  0xFFFFu    /* uint16_t character offsets */
+#endif
+#ifndef ARENA_MAX_NODES             /* node pool (one node per symbol in B / AB) */
+#define ARENA_MAX_NODES  ARENA_MAX_ITEMS
+#endif
+#ifndef ARENA_MAX_META              /* metadata pool of the tries (BC / ABC) */
+#define ARENA_MAX_META   ARENA_MAX_ITEMS
+#endif
+#ifndef ARENA_MAX_SHADOWS           /* redeclaration records of the tries */
+#define ARENA_MAX_SHADOWS ARENA_MAX_ITEMS
+#endif
 
 /* A trie stores each name once, so a second declaration of a stored name
  * needs one extra record holding the older declaration. Paid only on
@@ -103,8 +132,11 @@ static inline int fields_match(int type, int scope, int sc, int off, const TestS
  * original prototype's model. Frees are tracked so that variants which
  * free/reallocate (trie edge splits) are charged only for what is live.
  * The overhead is two machine words of chunk header, as in glibc: 16 B on a
- * 64-bit host (the prototype's figure), 8 B when built with -m32. */
+ * 64-bit host (the prototype's figure), 8 B when built with -m32. A target
+ * whose allocator differs (avr-libc: one size_t) overrides it. */
+#ifndef MALLOC_OVERHEAD
 #define MALLOC_OVERHEAD (2 * sizeof(void *))
+#endif
 #define HASH_BUCKETS    64
 
 typedef struct { size_t payload; size_t allocs; } Tracker;
@@ -261,8 +293,8 @@ static inline int run_experiment(const char *title, const Impl *var) {
     printf("    TOTAL                : %zu B  (%.1f B/symbol)\n\n", bt, (double)bt / NUM_SYMBOLS);
     printf("--- %s ---\n", var->label);  var->breakdown();
     printf("    TOTAL                : %zu B  (%.1f B/symbol)\n\n", vt, (double)vt / NUM_SYMBOLS);
-    printf(">>> %s vs baseline: %+.1f%% memory (%zd B)\n\n", title,
-           -100.0 * (1.0 - (double)vt / (double)bt), (ssize_t)vt - (ssize_t)bt);
+    printf(">>> %s vs baseline: %+.1f%% memory (%ld B)\n\n", title,
+           -100.0 * (1.0 - (double)vt / (double)bt), (long)vt - (long)bt);
 
     size_t budgets[] = { 512, 1024, 1536, 2048 };
     printf("--- Identifiers that fit in fixed RAM budget ---\n  %-8s %-14s %-14s\n", "Budget", "Baseline", "Variant");

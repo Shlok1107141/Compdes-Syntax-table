@@ -27,13 +27,13 @@ typedef struct {
     uint16_t symbol_id;      /* index into meta_pool when is_leaf */
 } TrieNode;
 
-static TrieNode    node_pool[ARENA_MAX_ITEMS];
+static TrieNode    node_pool[ARENA_MAX_NODES];
 static uint16_t    node_count;
 static char        char_pool[ARENA_MAX_CHARS];
 static uint16_t    char_used;
-static uint32_t    meta_pool[ARENA_MAX_ITEMS];  /* 4b type | 8b scope | 4b storage | 16b off */
+static uint32_t    meta_pool[ARENA_MAX_META];   /* 4b type | 8b scope | 4b storage | 16b off */
 static uint16_t    meta_count;
-static ArenaShadow shadow_pool[ARENA_MAX_ITEMS];
+static ArenaShadow shadow_pool[ARENA_MAX_SHADOWS];
 static uint16_t    shadow_count;
 
 static uint16_t new_node(void) {
@@ -87,8 +87,8 @@ static int abc_insert(const TestSymbol *s) {
 
     /* Worst case for one insert: two nodes, every character, one metadata
      * word, one shadow record. Refuse up front rather than half-insert. */
-    if ((size_t)node_count + 2 > ARENA_MAX_ITEMS || (size_t)char_used + len > ARENA_MAX_CHARS ||
-        meta_count >= ARENA_MAX_ITEMS || shadow_count >= ARENA_MAX_ITEMS) return -1;
+    if ((size_t)node_count + 2 > ARENA_MAX_NODES || (size_t)char_used + len > ARENA_MAX_CHARS ||
+        meta_count >= ARENA_MAX_META || shadow_count >= ARENA_MAX_SHADOWS) return -1;
 
     while (pos < len) {
         uint16_t *slot = find_child_slot(cur, key[pos]);
@@ -191,6 +191,32 @@ static size_t abc_total(void) {
          + (size_t)char_used
          + (size_t)meta_count * sizeof(uint32_t)
          + (size_t)shadow_count * sizeof(ArenaShadow);
+}
+
+/* Counts first, then the used part of each arena, in a fixed order. */
+size_t abc_save(void (*put)(const void *p, size_t n)) {
+    uint16_t counts[4] = { node_count, char_used, meta_count, shadow_count };
+    put(counts, sizeof counts);
+    put(node_pool, (size_t)node_count * sizeof(TrieNode));
+    put(char_pool, char_used);
+    put(meta_pool, (size_t)meta_count * sizeof(uint32_t));
+    put(shadow_pool, (size_t)shadow_count * sizeof(ArenaShadow));
+    return sizeof counts + abc_total();
+}
+
+static int fits(size_t count, size_t max) { return count <= max; }
+
+int abc_load(void (*get)(void *p, size_t n)) {
+    uint16_t counts[4];
+    get(counts, sizeof counts);
+    if (counts[0] == 0 || !fits(counts[0], ARENA_MAX_NODES) || !fits(counts[1], ARENA_MAX_CHARS) ||
+        !fits(counts[2], ARENA_MAX_META) || !fits(counts[3], ARENA_MAX_SHADOWS)) return -1;
+    node_count = counts[0]; char_used = counts[1]; meta_count = counts[2]; shadow_count = counts[3];
+    get(node_pool, (size_t)node_count * sizeof(TrieNode));
+    get(char_pool, char_used);
+    get(meta_pool, (size_t)meta_count * sizeof(uint32_t));
+    get(shadow_pool, (size_t)shadow_count * sizeof(ArenaShadow));
+    return 0;
 }
 static void abc_breakdown(void) {
     printf("    sizeof(TrieNode)     : %zu B\n", sizeof(TrieNode));
