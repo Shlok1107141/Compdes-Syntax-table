@@ -1,9 +1,9 @@
 variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-baseline,400,41,47,out_of_ram,1343,1343,256,1
-A,400,49,58,out_of_ram,1405,1405,261,1
-B,400,48,48,arena_full,1172,1172,480,1
-C,400,38,44,out_of_ram,1389,1367,270,1
-AB,400,50,50,arena_full,1014,1014,477,1
-AC,400,48,55,out_of_ram,1390,1358,269,1
-BC,400,46,46,arena_full,1157,1157,482,1
-ABC,400,54,54,arena_full,1143,1143,434,1
+baseline,400,41,46,out_of_ram,1310,1310,267,1
+A,400,49,55,out_of_ram,1333,1333,256,1
+B,400,48,48,arena_full,1172,1172,409,1
+C,400,38,42,out_of_ram,1319,1300,263,1
+AB,400,50,50,arena_full,1014,1014,406,1
+AC,400,48,53,out_of_ram,1321,1295,261,1
+BC,400,46,46,arena_full,1157,1157,411,1
+ABC,400,54,54,arena_full,1143,1143,399,1

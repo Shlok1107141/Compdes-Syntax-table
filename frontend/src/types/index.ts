@@ -96,6 +96,77 @@ export interface HardwareStatusResponse {
   detail?: string;
 }
 
+/* ---- Arduino Uno, live (backend/hardware_uno.py, firmware/uno_bench) ---- */
+
+export interface SerialPortInfo {
+  device: string;
+  description: string;
+  vid_pid: string | null;
+  likely_board: string | null;
+}
+
+export interface UnoStatus {
+  status: 'ONLINE';
+  port: string;
+  /** Structure the board was flashed with: baseline, A, B, C, AB, AC, BC or ABC. */
+  variant: string;
+  clock_mhz: number;
+  free_ram: number;
+  /** RAM taken by the firmware's globals, including an arena build's fixed pools. */
+  static_ram: number;
+  live_symbols: number;
+}
+
+export type UnoInsertResult = 'ok' | 'arena_full' | 'out_of_ram';
+
+/** One line of the POST /hardware/uno/live stream. Byte counts come from the board. */
+export type UnoLiveEvent =
+  | {
+      event: 'start';
+      port: string;
+      variant: string;
+      free_ram: number;
+      static_ram: number;
+      /** Bytes every structure gets in the capacity test (STRUCT_BUDGET). */
+      budget: number;
+      total: number;
+      skipped: { name: string; reason: string }[];
+      /** The same program measured by the engine on the PC (64-bit). */
+      pc: { baseline_bytes: number; compressed_bytes: number; savings_pct: number };
+    }
+  | {
+      event: 'symbol';
+      index: number;
+      name: string;
+      type: string;
+      scope: number;
+      storage_class: string;
+      offset: number;
+      stored: number;
+      result: UnoInsertResult;
+      table_bytes: number;
+      heap_bytes: number;
+      free_ram: number;
+      insert_us: number;
+      verified: boolean;
+      packed_hex: string;
+    }
+  | {
+      event: 'done';
+      stored: number;
+      table_bytes: number;
+      heap_bytes: number;
+      free_ram: number;
+      stopped: 'none' | 'arena_full' | 'out_of_ram';
+      variant: string;
+      total: number;
+      refused: number;
+      /** Textbook table for the stored symbols on the Uno: a model, exact on every set measured. */
+      avr_baseline_model_bytes: number | null;
+      saving_vs_model_pct: number | null;
+    }
+  | { event: 'error'; status: number; detail: string };
+
 export interface HardwareAnalyzeResponse {
   status: string;
   hardware: {

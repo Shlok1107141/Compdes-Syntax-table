@@ -1,4 +1,4 @@
-import type { AnalyzeRequest, AnalyzeResponse, ExecutionMode, HealthStatus, SymbolEntry, AblationData, SyntaxBenchmarkResponse, HardwareStatusResponse, HardwareAnalyzeResponse } from '../types';
+import type { AnalyzeRequest, AnalyzeResponse, ExecutionMode, HealthStatus, SymbolEntry, AblationData, SyntaxBenchmarkResponse, HardwareStatusResponse, HardwareAnalyzeResponse, SerialPortInfo, UnoStatus, UnoLiveEvent } from '../types';
 import { SAMPLE_PRESETS } from '../data/sampleCodes';
 import sampleResults from '../data/sampleResults.json';
 import syntaxResults from '../data/syntaxResults.json';
@@ -400,6 +400,100 @@ export async function fetchSyntaxBenchmarks(): Promise<SyntaxBenchmarkResponse> 
 }
 
 
+
+/* ---------------- Arduino Uno, live (backend/hardware_uno.py) ----------------
+ * No fallbacks here: if the backend or the board does not answer, the caller
+ * gets an error to show, never stand-in numbers. */
+
+export class HardwareError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const BACKEND_DOWN =
+  'The backend is not running on this computer. Start it with: cd backend; uvicorn main:app --port 8000';
+
+async function hardwareFetch(path: string, init?: RequestInit): Promise<Response> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, init);
+  } catch (err) {
+    if (init?.signal?.aborted) throw err;
+    try {
+      res = await fetch(`http://localhost:8000${path}`, init);
+    } catch {
+      throw new HardwareError(BACKEND_DOWN, 0);
+    }
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    let detail = '';
+    try {
+      detail = JSON.parse(text).detail ?? '';
+    } catch {
+      // a proxy error page, not the backend's JSON
+    }
+    throw new HardwareError(detail || (res.status >= 500 || res.status === 404 ? BACKEND_DOWN : text), res.status);
+  }
+  return res;
+}
+
+async function hardwareJson<T>(path: string, body?: object): Promise<T> {
+  const init: RequestInit = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : {};
+  return (await (await hardwareFetch(path, { ...init, signal: AbortSignal.timeout(20000) })).json()) as T;
+}
+
+export const listSerialPorts = () =>
+  hardwareJson<{ ports: SerialPortInfo[]; connected: string | null }>('/hardware/ports');
+export const unoStatus = (port: string) =>
+  hardwareJson<UnoStatus>(`/hardware/uno/status?port=${encodeURIComponent(port)}`);
+export const unoReset = (port: string) => hardwareJson<UnoStatus>('/hardware/uno/reset', { port });
+export const unoDisconnect = () => hardwareJson<{ connected: null }>('/hardware/uno/disconnect', {});
+export const unoLookup = (port: string, name: string) =>
+  hardwareJson<{ name: string; found: boolean; declarations: number | null }>('/hardware/uno/lookup', { port, name });
+export const unoSave = (port: string) =>
+  hardwareJson<{ symbols: number; snapshot_bytes: number; table_bytes: number; save_ms: number }>(
+    '/hardware/uno/save', { port });
+export const unoLoad = (port: string) =>
+  hardwareJson<{ symbols: number; snapshot_bytes: number; table_bytes: number; load_ms: number }>(
+    '/hardware/uno/load', { port });
+
+/** Parse `code` on the PC and insert its declarations on the Uno one by one;
+ * `onEvent` gets each line of the stream as the board answers. */
+export async function runOnUno(
+  code: string,
+  port: string,
+  delayMs: number,
+  onEvent: (event: UnoLiveEvent) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const res = await hardwareFetch('/hardware/uno/live', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, port, delay_ms: delayMs }),
+    signal,
+  });
+  if (!res.body) throw new HardwareError('The browser cannot read a streamed response.', 0);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let newline: number;
+    while ((newline = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+      if (line) onEvent(JSON.parse(line) as UnoLiveEvent);
+    }
+  }
+}
 
 /** Probes hardware status (ESP32 on COM6). */
 export async function fetchHardwareStatus(port: string = 'COM6'): Promise<HardwareStatusResponse> {

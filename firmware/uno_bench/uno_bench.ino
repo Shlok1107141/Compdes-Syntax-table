@@ -13,7 +13,7 @@
 #include "src/bench.h"
 
 static FILE serial_out;
-static char line[24];
+static char line[56];          /* longest: "SYM 15 255 15 65535 " + a 32-character name */
 static uint8_t line_len = 0;
 
 static int serial_putc(char c, FILE *) {
@@ -29,7 +29,7 @@ void setup() {
     fdev_setup_stream(&serial_out, serial_putc, NULL, _FDEV_SETUP_WRITE);
     stdout = &serial_out;
     pinMode(LED_BUILTIN, OUTPUT);
-    printf_P(PSTR("# uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL\n"));
+    printf_P(PSTR("# uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE\n"));
 }
 
 void loop() {

@@ -1138,5 +1138,476 @@
       "savings_pct": 77.9,
       "live_symbols": 24
     }
+  },
+  "uno-demo-50": {
+    "baseline_bytes": 4217,
+    "compressed_bytes": 1065,
+    "savings_pct": 74.75,
+    "symbol_table": [
+      {
+        "name": "led",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 0,
+        "references": 0,
+        "packed": 1073807360
+      },
+      {
+        "name": "led_data",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 4,
+        "references": 0,
+        "packed": 1073807364
+      },
+      {
+        "name": "led_state",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 8,
+        "references": 0,
+        "packed": 268501000
+      },
+      {
+        "name": "led_port_prev",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 12,
+        "references": 0,
+        "packed": 1073807372
+      },
+      {
+        "name": "led_rate",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 16,
+        "references": 0,
+        "packed": 65552
+      },
+      {
+        "name": "led_index_avg",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 20,
+        "references": 0,
+        "packed": 65556
+      },
+      {
+        "name": "led_level",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 24,
+        "references": 0,
+        "packed": 65560
+      },
+      {
+        "name": "handler",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 28,
+        "references": 0,
+        "packed": 1073807388
+      },
+      {
+        "name": "handler_addr",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 32,
+        "references": 0,
+        "packed": 1073807392
+      },
+      {
+        "name": "handler_type",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 36,
+        "references": 0,
+        "packed": 65572
+      },
+      {
+        "name": "handler_head",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 40,
+        "references": 0,
+        "packed": 65576
+      },
+      {
+        "name": "handler_max",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 44,
+        "references": 0,
+        "packed": 65580
+      },
+      {
+        "name": "handler_pin",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 48,
+        "references": 0,
+        "packed": 1073807408
+      },
+      {
+        "name": "handler_tail_hi",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 52,
+        "references": 0,
+        "packed": 65588
+      },
+      {
+        "name": "stack",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 56,
+        "references": 0,
+        "packed": 65592
+      },
+      {
+        "name": "stack_pin",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 60,
+        "references": 0,
+        "packed": 1073807420
+      },
+      {
+        "name": "stack_mask",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 64,
+        "references": 0,
+        "packed": 268501056
+      },
+      {
+        "name": "stack_cfg",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 65,
+        "references": 0,
+        "packed": 268501057
+      },
+      {
+        "name": "stack_flag",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 68,
+        "references": 0,
+        "packed": 1073807428
+      },
+      {
+        "name": "can",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 72,
+        "references": 0,
+        "packed": 1073807432
+      },
+      {
+        "name": "can_cfg",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 76,
+        "references": 0,
+        "packed": 1073807436
+      },
+      {
+        "name": "can_rate",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 80,
+        "references": 0,
+        "packed": 1073807440
+      },
+      {
+        "name": "can_port",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 84,
+        "references": 0,
+        "packed": 1073807444
+      },
+      {
+        "name": "can_cb",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 88,
+        "references": 0,
+        "packed": 65624
+      },
+      {
+        "name": "can_count_avg",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 92,
+        "references": 0,
+        "packed": 65628
+      },
+      {
+        "name": "can_mask",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 96,
+        "references": 0,
+        "packed": 65632
+      },
+      {
+        "name": "can_time",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 100,
+        "references": 0,
+        "packed": 268501092
+      },
+      {
+        "name": "can_addr",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 101,
+        "references": 0,
+        "packed": 268501093
+      },
+      {
+        "name": "can_head_hi",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 104,
+        "references": 0,
+        "packed": 1073807464
+      },
+      {
+        "name": "relay",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 108,
+        "references": 0,
+        "packed": 268501100
+      },
+      {
+        "name": "relay_state",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 112,
+        "references": 0,
+        "packed": 1073807472
+      },
+      {
+        "name": "relay_cb_cur",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 116,
+        "references": 0,
+        "packed": 65652
+      },
+      {
+        "name": "relay_len",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 120,
+        "references": 0,
+        "packed": 268501112
+      },
+      {
+        "name": "relay_speed_lo",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 121,
+        "references": 0,
+        "packed": 268501113
+      },
+      {
+        "name": "relay_buf_tmp",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 124,
+        "references": 0,
+        "packed": 65660
+      },
+      {
+        "name": "relay_buf",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 128,
+        "references": 0,
+        "packed": 268501120
+      },
+      {
+        "name": "relay_flag",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 132,
+        "references": 0,
+        "packed": 1073807492
+      },
+      {
+        "name": "relay_reg",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 136,
+        "references": 0,
+        "packed": 65672
+      },
+      {
+        "name": "relay_type",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 140,
+        "references": 0,
+        "packed": 65676
+      },
+      {
+        "name": "pump",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 144,
+        "references": 0,
+        "packed": 65680
+      },
+      {
+        "name": "pump_pin",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 148,
+        "references": 0,
+        "packed": 65684
+      },
+      {
+        "name": "pump_max",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 152,
+        "references": 0,
+        "packed": 268501144
+      },
+      {
+        "name": "pump_size",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 156,
+        "references": 0,
+        "packed": 65692
+      },
+      {
+        "name": "pump_port",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 160,
+        "references": 0,
+        "packed": 65696
+      },
+      {
+        "name": "pump_err",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 164,
+        "references": 0,
+        "packed": 1073807524
+      },
+      {
+        "name": "ram",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 168,
+        "references": 0,
+        "packed": 65704
+      },
+      {
+        "name": "ram_head",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 172,
+        "references": 0,
+        "packed": 65708
+      },
+      {
+        "name": "ram_len_lo",
+        "type": "char",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 176,
+        "references": 0,
+        "packed": 268501168
+      },
+      {
+        "name": "ram_rate",
+        "type": "int",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 180,
+        "references": 0,
+        "packed": 65716
+      },
+      {
+        "name": "ram_reg_next",
+        "type": "float",
+        "scope": 0,
+        "storage_class": "global",
+        "offset": 184,
+        "references": 0,
+        "packed": 1073807544
+      }
+    ],
+    "ablation": {
+      "bitpack_only": 3817,
+      "arena_only": 1633,
+      "trie_only": 6417,
+      "arena_bitpack": 1033,
+      "trie_bitpack": 4305,
+      "trie_arena": 1665
+    },
+    "peak": {
+      "baseline_bytes": 4217,
+      "compressed_bytes": 1065,
+      "savings_pct": 74.75,
+      "live_symbols": 50
+    }
   }
 }
