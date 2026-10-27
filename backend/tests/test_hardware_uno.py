@@ -78,6 +78,8 @@ class FakeBoard:
             self.saved = list(self.live)
             return [f"LIVE,SAVED,{len(self.live)},{10 + 20 * len(self.live)},{20 * len(self.live)},1500000"]
         if cmd == "LOAD":
+            if self.saved == "benchmark":           # what collect.py's SAVE <set> leaves behind
+                return ["CSV,LOAD,ABC,proto30,30,677,5220,1,669,1"]
             if self.saved is None:
                 return ["LIVE,ERROR,no_snapshot"]
             self.live = list(self.saved)
@@ -166,6 +168,12 @@ def test_command_lost_to_a_reset_is_sent_again(client, board):
     r = client.post("/hardware/uno/load", json={"port": PORT})
     assert r.status_code == 200 and r.json()["symbols"] == 1
     assert client.post("/hardware/uno/lookup", json={"port": PORT, "name": "counter"}).json()["found"]
+
+
+def test_load_explains_a_benchmark_snapshot(client, board):
+    board.saved = "benchmark"
+    r = client.post("/hardware/uno/load", json={"port": PORT})
+    assert r.status_code == 409 and "collect.py" in r.json()["detail"]
 
 
 def test_bad_lookup_name_is_rejected(client, board):

@@ -281,6 +281,9 @@ def load(session: UnoSession, port: str) -> dict[str, Any]:
     lines = session.command(port, "LOAD", timeout=5.0)
     rows = _live_rows(lines, "LOADED")
     if not rows:
+        if any(ln.startswith("CSV,LOAD,") for ln in lines):
+            raise UnoError(409, "the EEPROM holds a benchmark snapshot written by collect.py, not a table "
+                                "saved from the app: run a program and press Save first")
         err = _live_error(lines) or "no reply"
         msgs = {"no_snapshot": "no saved table for this firmware build in EEPROM",
                 "no_persistence": "this firmware build cannot load (only baseline and ABC can)"}
