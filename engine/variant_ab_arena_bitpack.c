@@ -19,7 +19,7 @@ typedef struct {
     uint32_t meta;           /* 4b type | 8b scope | 4b storage | 16b off  */
 } ABNode;
 
-static ABNode   node_pool[ARENA_MAX_ITEMS];
+static ABNode   node_pool[ARENA_MAX_NODES];
 static uint16_t node_count;
 static char     char_pool[ARENA_MAX_CHARS];
 static uint16_t char_used;
@@ -33,7 +33,7 @@ static void ab_init(void) {
 
 static int ab_insert(const TestSymbol *s) {
     size_t len = strlen(s->name) + 1;
-    if (node_count >= ARENA_MAX_ITEMS || (size_t)char_used + len > ARENA_MAX_CHARS) return -1;
+    if (node_count >= ARENA_MAX_NODES || (size_t)char_used + len > ARENA_MAX_CHARS) return -1;
     uint16_t id = node_count++;
     ABNode *n = &node_pool[id];
     n->name_off = char_used;

@@ -59,6 +59,45 @@ jobs:
           cd engine
           make check
 
+  firmware:
+    name: firmware (Arduino Uno benchmark)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      ASAN_OPTIONS: "detect_leaks=1:abort_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sketch's engine copy matches engine/
+        run: python3 firmware/tools/sync_engine.py --check
+
+      - name: Generated symbol sets and pools match the engine
+        run: |
+          python3 firmware/tools/gen_workloads.py
+          git diff --exit-code firmware/uno_bench/src/workloads.h firmware/uno_bench/src/pools.h
+
+      - name: Benchmark logic on the PC under sanitizers (all 8 structures)
+        run: sh firmware/tools/host_test.sh
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Compile for the Uno (all 8 structures)
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr@1.8.7
+          for v in 0 1 2 3 4 5 6 7; do
+            echo "=== BENCH_VARIANT=$v ==="
+            arduino-cli compile --fqbn arduino:avr:uno \
+              --build-property "compiler.c.extra_flags=-DBENCH_VARIANT=$v" \
+              --build-property "compiler.cpp.extra_flags=-DBENCH_VARIANT=$v" \
+              firmware/uno_bench | tail -2
+          done
+
   backend:
     name: backend
     runs-on: ubuntu-latest

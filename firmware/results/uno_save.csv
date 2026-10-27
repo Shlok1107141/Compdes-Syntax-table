@@ -1,0 +1,5 @@
+variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us
+baseline,proto30,30,901,533,1024,1,1574580
+baseline,esp32_sensor,23,833,521,1024,1,1428540
+ABC,proto30,30,669,677,1024,1,1711264
+ABC,esp32_sensor,23,570,578,1024,1,1402524

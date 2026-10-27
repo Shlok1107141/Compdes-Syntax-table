@@ -1,0 +1,5 @@
+variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok
+baseline,proto30,30,533,7856,1,901,1
+baseline,esp32_sensor,23,521,7996,1,833,1
+ABC,proto30,30,677,5224,1,669,1
+ABC,esp32_sensor,23,578,4464,1,570,1

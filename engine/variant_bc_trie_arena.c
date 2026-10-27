@@ -31,13 +31,13 @@ typedef struct {
 
 typedef struct { int type, scope, storage_class, offset; } Meta;   /* unpacked */
 
-static TrieNode    node_pool[ARENA_MAX_ITEMS];
+static TrieNode    node_pool[ARENA_MAX_NODES];
 static uint16_t    node_count;
 static char        char_pool[ARENA_MAX_CHARS];
 static uint16_t    char_used;
-static Meta        meta_pool[ARENA_MAX_ITEMS];
+static Meta        meta_pool[ARENA_MAX_META];
 static uint16_t    meta_count;
-static ArenaShadow shadow_pool[ARENA_MAX_ITEMS];
+static ArenaShadow shadow_pool[ARENA_MAX_SHADOWS];
 static uint16_t    shadow_count;
 
 static uint16_t new_node(void) {
@@ -97,8 +97,8 @@ static int bc_insert(const TestSymbol *s) {
 
     /* Worst case for one insert: two nodes, every character, one metadata
      * record, one shadow record. Refuse up front rather than half-insert. */
-    if ((size_t)node_count + 2 > ARENA_MAX_ITEMS || (size_t)char_used + len > ARENA_MAX_CHARS ||
-        meta_count >= ARENA_MAX_ITEMS || shadow_count >= ARENA_MAX_ITEMS) return -1;
+    if ((size_t)node_count + 2 > ARENA_MAX_NODES || (size_t)char_used + len > ARENA_MAX_CHARS ||
+        meta_count >= ARENA_MAX_META || shadow_count >= ARENA_MAX_SHADOWS) return -1;
 
     while (pos < len) {
         uint16_t *slot = find_child_slot(cur, key[pos]);
