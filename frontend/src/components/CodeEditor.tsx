@@ -27,6 +27,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const byteCount = new TextEncoder().encode(code).length;
   const isOversized = byteCount > MAX_PAYLOAD_BYTES;
   const lineCount = code.split('\n').length;
+  const gutterRef = React.useRef<HTMLDivElement>(null);
+
+  // The gutter never scrolls by itself: it follows the text area.
+  const syncGutter = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (gutterRef.current) gutterRef.current.scrollTop = e.currentTarget.scrollTop;
+  };
 
   const handleClear = () => {
     onChange('');
@@ -162,8 +168,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
 
         {/* Preset Selector */}
-        <div className="flex items-center space-x-2">
-          <label htmlFor="preset-select" className="text-xs text-slate-700 font-bold hidden sm:inline">
+        <div className="flex items-center space-x-2 min-w-0 max-w-full">
+          <label htmlFor="preset-select" className="text-xs text-slate-700 font-bold hidden sm:inline shrink-0">
             Source Preset:
           </label>
           <select
@@ -173,7 +179,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
               const p = SAMPLE_PRESETS.find((preset) => preset.id === e.target.value);
               if (p) onSelectPreset(p);
             }}
-            className="text-xs bg-white border-2 border-slate-300 text-slate-900 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-700 font-bold shadow-2xs"
+            className="min-w-0 max-w-full text-xs bg-white border-2 border-slate-300 text-slate-900 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-700 font-bold shadow-2xs"
           >
             {SAMPLE_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -198,9 +204,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Code Textarea with Line Numbers */}
-      <div className="relative flex-1 min-h-[360px] flex bg-white font-mono text-xs sm:text-sm">
-        {/* Line Numbers Sidebar */}
-        <div className="py-4 pl-3 pr-2.5 select-none text-right text-slate-500 font-bold bg-slate-50 border-r-2 border-slate-200 min-w-[46px]">
+      <div className="relative flex-1 min-h-[360px] flex overflow-hidden bg-white font-mono text-xs sm:text-sm">
+        {/* Line Numbers Sidebar (clipped; scrolled together with the text area) */}
+        <div ref={gutterRef} aria-hidden="true"
+          className="pt-4 pb-10 pl-3 pr-2.5 select-none text-right text-slate-500 font-bold bg-slate-50 border-r-2 border-slate-200 min-w-[46px] overflow-hidden">
           {Array.from({ length: Math.max(lineCount, 18) }).map((_, i) => (
             <div key={i} className="leading-6 text-[11px]">
               {i + 1}
@@ -213,6 +220,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           value={code}
           onChange={(e) => handleTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onScroll={syncGutter}
+          wrap="off"
           placeholder="// Paste or write your own C code declarations, structs, and functions here...
 int sensor_temp;
 int sensor_press;
@@ -223,7 +232,7 @@ struct MotorState {
 void system_init(int bus_rate) {
     int local_counter = 0;
 }"
-          className="w-full h-full p-4 bg-white text-slate-900 focus:outline-none resize-none leading-6 font-mono font-medium placeholder:text-slate-400"
+          className="w-full h-full p-4 bg-white text-slate-900 focus:outline-none resize-none leading-6 font-mono font-medium placeholder:text-slate-400 whitespace-pre overflow-auto"
           spellCheck={false}
         />
       </div>

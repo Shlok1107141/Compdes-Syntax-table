@@ -56,7 +56,8 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
   return (
     <div className="space-y-5">
       {/* Top Hero Readout Row (3 Definitive Tiles) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* lg-xl: the page is two columns and this one is too narrow for three cards side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Tile 1: Memory Savings (Bold Orange Highlight) */}
         <div className="md:col-span-1 rounded-xl border-2 border-orange-300 bg-orange-50/70 p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -69,11 +70,12 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ data }) => {
           </div>
 
           <div className="my-3">
-            <div className="flex items-baseline space-x-2">
-              <span className="text-6xl font-black text-orange-600 font-mono tracking-tight">
+            <div className="flex items-baseline space-x-2 min-w-0">
+              {/* Sized to the card's width at each breakpoint (narrowest: md, three cards in a row). */}
+              <span className="text-5xl md:text-3xl lg:text-5xl 2xl:text-6xl font-black text-orange-600 font-mono tracking-tight">
                 {savings_pct}%
               </span>
-              <TrendingDown className="w-8 h-8 text-orange-600 mb-1" />
+              <TrendingDown className="w-8 h-8 shrink-0 text-orange-600 mb-1" />
             </div>
             <p className="text-xs text-slate-800 mt-2 font-bold leading-relaxed">
               Spared <span className="text-orange-700 font-black font-mono text-sm">{netBytesSaved.toLocaleString()} bytes</span> of RAM across {symbolCount} identifiers.
