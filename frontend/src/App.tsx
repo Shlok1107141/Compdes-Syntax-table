@@ -7,6 +7,7 @@ import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
 import { SyntaxTableSuite } from './components/SyntaxTableSuite';
 import { HardwareTelemetry } from './components/HardwareTelemetry';
 import { UnoLive } from './components/UnoLive';
+import { UnoBoardResults } from './components/UnoBoardResults';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
@@ -176,7 +177,14 @@ export function App() {
                 </button>
               ))}
             </div>
-            {hardwareBoard === 'uno' ? <UnoLive editorCode={code} /> : <HardwareTelemetry currentCode={code} />}
+            {hardwareBoard === 'uno' ? (
+              <div className="space-y-8">
+                <UnoBoardResults editorCode={code} />
+                <UnoLive editorCode={code} />
+              </div>
+            ) : (
+              <HardwareTelemetry currentCode={code} />
+            )}
           </div>
         ) : (
           <>

@@ -73,6 +73,14 @@ speed, capacity and EEPROM persistence. Results and how to read them:
 * **Live in the app:** the Hardware tab streams a program to the board and shows each
   insert as it happens; flash a structure with `python firmware/tools/flash.py ABC --port COM3`.
   Demo script and checklist: [`DEMO.md`](DEMO.md).
+* **Every preset on the board (charts in the Hardware tab):**
+  `python firmware/tools/board_runs.py --port COM3` runs the six presets and 150
+  generated programs on the baseline, AB and ABC builds, timing each insert and
+  lookup on the board. Then `node frontend/scripts/uno_features.ts` and
+  `python firmware/tools/fit_uno_model.py` write `frontend/src/data/unoBoard.json`.
+  For code the website cannot send to a board, `frontend/src/lib/unoModel.ts`
+  computes bytes and refusals exactly and estimates times from the fitted model;
+  `node frontend/scripts/check_uno_model.ts` (in CI) checks it against every run.
 * `src/` holds a copy of `engine/` (`python firmware/tools/sync_engine.py`; CI checks
   it is identical) and generated symbol sets (`python firmware/tools/gen_workloads.py`).
 

@@ -258,8 +258,11 @@ def lookup(session: UnoSession, port: str, name: str) -> dict[str, Any]:
         if _live_error(lines) == "no_session":
             raise UnoError(409, "no table on the board: run some code or load a saved one first")
         raise UnoError(502, "the board did not answer the lookup")
-    _, _, got, found, decls = rows[0]
-    return {"name": got, "found": found == "FOUND", "declarations": int(decls) if int(decls) >= 0 else None}
+    got, found, decls = rows[0][2:5]
+    out = {"name": got, "found": found == "FOUND", "declarations": int(decls) if int(decls) >= 0 else None}
+    if len(rows[0]) >= 7:                      # firmware that times the lookup (repeated on the board)
+        out["lookup_us"] = round(int(rows[0][5]) / int(rows[0][6]), 2)
+    return out
 
 
 def save(session: UnoSession, port: str) -> dict[str, Any]:
