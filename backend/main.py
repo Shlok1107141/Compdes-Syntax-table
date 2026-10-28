@@ -354,7 +354,7 @@ async def uno_live(payload: UnoLiveRequest, request: Request):
     from starlette.concurrency import run_in_threadpool
 
     from hardware_uno import (SESSION, UnoError, avr_baseline_bytes, check_port, decode_symbols,
-                              live_end, live_insert, live_ready)
+                              live_end, live_insert, live_ready, lookup)
 
     _check_rate_limit(request)
     size = len(payload.code.encode("utf-8"))
@@ -399,9 +399,16 @@ async def uno_live(payload: UnoLiveRequest, request: Request):
             model = avr_baseline_bytes(stored) if stored else None
             saving = (round(100 * (1 - done["table_bytes"] / model), 2)
                       if model and ready["variant"] != "baseline" else None)
+            # time a lookup of every stored name, on the board (firmware that reports it)
+            times = []
+            for name in dict.fromkeys(stored):
+                found = await run_in_threadpool(lookup, SESSION, port, name)
+                if "lookup_us" in found:
+                    times.append(found["lookup_us"])
             yield line({"event": "done", **done, "variant": ready["variant"], "total": len(symbols),
                         "refused": len(symbols) - done["stored"],
-                        "avr_baseline_model_bytes": model, "saving_vs_model_pct": saving})
+                        "avr_baseline_model_bytes": model, "saving_vs_model_pct": saving,
+                        "lookup_us_mean": round(sum(times) / len(times), 2) if times else None})
         except UnoError as exc:
             yield line({"event": "error", "status": exc.status_code, "detail": exc.detail})
         finally:
