@@ -490,9 +490,13 @@ static void cmd_end(void) {
              free_ram(), stop_name(live_stop));
 }
 
-/* LOOKUP <name>: is it in the live table? ABC also says how many declarations. */
+/* LOOKUP <name>: is it in the live table? ABC also says how many declarations.
+ * The lookup runs LOOKUP_REPS times and the total is reported: one lookup is
+ * only a few ticks of micros() (4 us resolution). */
+#define LOOKUP_REPS 16
 static void cmd_lookup(const char *name) {
-    int decls = -1;
+    int decls = -1, found = 0;
+    unsigned long t0, us;
     if (!live_active) { printf_P(PSTR("LIVE,ERROR,no_session\n")); return; }
     if (strlen(name) == 0 || strlen(name) > NAME_MAX_LEN) { printf_P(PSTR("LIVE,ERROR,bad_name\n")); return; }
 #if BENCH_VARIANT == 7
@@ -501,8 +505,11 @@ static void cmd_lookup(const char *name) {
         decls = (int)abc_declarations(name, out, 8);
     }
 #endif
-    if (IMPL.absent(name)) printf_P(PSTR("LIVE,LOOKUP,%s,ABSENT,%d\n"), name, decls);
-    else printf_P(PSTR("LIVE,LOOKUP,%s,FOUND,%d\n"), name, decls);
+    t0 = micros();
+    for (uint8_t r = 0; r < LOOKUP_REPS; r++) found = !IMPL.absent(name);
+    us = micros() - t0;
+    if (found) printf_P(PSTR("LIVE,LOOKUP,%s,FOUND,%d,%lu,%d\n"), name, decls, us, LOOKUP_REPS);
+    else printf_P(PSTR("LIVE,LOOKUP,%s,ABSENT,%d,%lu,%d\n"), name, decls, us, LOOKUP_REPS);
 }
 
 static void cmd_save_live(void) {

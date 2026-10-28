@@ -1,0 +1,1092 @@
+{
+ "source": "Measured on the Arduino Uno by firmware/tools/board_runs.py; written by firmware/tools/fit_uno_model.py",
+ "board": "Arduino Uno compatible (ATmega328P, CH340 USB-serial, Optiboot)",
+ "measured": "2026-10-28",
+ "counts": {
+  "runs": 468,
+  "inserts": 13995,
+  "lookups": 17259
+ },
+ "presets": [
+  {
+   "id": "embedded-prototype-30",
+   "name": "Embedded Sensor Subsystem (Prototype's 30 names)",
+   "baseline": {
+    "n": 30,
+    "stored": 30,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 901,
+    "heap_bytes": 773,
+    "min_free_ram": 767,
+    "insert_us_mean": 57.73,
+    "lookup_hit_us_mean": 33.17,
+    "lookup_miss_us_mean": 35.33
+   },
+   "AB": {
+    "n": 30,
+    "stored": 30,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 661,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 68.13,
+    "lookup_hit_us_mean": 34.82,
+    "lookup_miss_us_mean": 35.95
+   },
+   "ABC": {
+    "n": 30,
+    "stored": 30,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 669,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 84.8,
+    "lookup_hit_us_mean": 34.92,
+    "lookup_miss_us_mean": 38.95
+   }
+  },
+  {
+   "id": "uart-driver-locals",
+   "name": "UART Driver (Functions Reuse Locals)",
+   "baseline": {
+    "n": 22,
+    "stored": 22,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 636,
+    "heap_bytes": 508,
+    "min_free_ram": 1032,
+    "insert_us_mean": 48.18,
+    "lookup_hit_us_mean": 28.23,
+    "lookup_miss_us_mean": 33.27
+   },
+   "AB": {
+    "n": 22,
+    "stored": 22,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 460,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 59.64,
+    "lookup_hit_us_mean": 29.59,
+    "lookup_miss_us_mean": 34.23
+   },
+   "ABC": {
+    "n": 22,
+    "stored": 22,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 381,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 74.73,
+    "lookup_hit_us_mean": 29.5,
+    "lookup_miss_us_mean": 30.4
+   }
+  },
+  {
+   "id": "can-bus-controller",
+   "name": "CAN Bus & Motor Subsystem (High Redundancy)",
+   "baseline": {
+    "n": 28,
+    "stored": 28,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 1087,
+    "heap_bytes": 959,
+    "min_free_ram": 581,
+    "insert_us_mean": 85.71,
+    "lookup_hit_us_mean": 58.43,
+    "lookup_miss_us_mean": 56.23
+   },
+   "AB": {
+    "n": 28,
+    "stored": 28,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 863,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 96.57,
+    "lookup_hit_us_mean": 59.82,
+    "lookup_miss_us_mean": 57.33
+   },
+   "ABC": {
+    "n": 28,
+    "stored": 28,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 824,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 97.71,
+    "lookup_hit_us_mean": 45.21,
+    "lookup_miss_us_mean": 46.1
+   }
+  },
+  {
+   "id": "nested-scopes-c",
+   "name": "Lexical Scoping & Shadowing",
+   "baseline": {
+    "n": 11,
+    "stored": 11,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 468,
+    "heap_bytes": 340,
+    "min_free_ram": 1200,
+    "insert_us_mean": 73.09,
+    "lookup_hit_us_mean": 48.56,
+    "lookup_miss_us_mean": 47.64
+   },
+   "AB": {
+    "n": 11,
+    "stored": 11,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 380,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 86.91,
+    "lookup_hit_us_mean": 49.81,
+    "lookup_miss_us_mean": 47.75
+   },
+   "ABC": {
+    "n": 11,
+    "stored": 11,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 294,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 83.27,
+    "lookup_hit_us_mean": 34.81,
+    "lookup_miss_us_mean": 36.17
+   }
+  },
+  {
+   "id": "random-worst-case",
+   "name": "Disjoint Identifiers (Worst-Case)",
+   "baseline": {
+    "n": 24,
+    "stored": 24,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 636,
+    "heap_bytes": 508,
+    "min_free_ram": 1032,
+    "insert_us_mean": 42.33,
+    "lookup_hit_us_mean": 19.1,
+    "lookup_miss_us_mean": 23.82
+   },
+   "AB": {
+    "n": 24,
+    "stored": 24,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 444,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 52.5,
+    "lookup_hit_us_mean": 20.64,
+    "lookup_miss_us_mean": 24.0
+   },
+   "ABC": {
+    "n": 24,
+    "stored": 24,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 480,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 86.17,
+    "lookup_hit_us_mean": 35.79,
+    "lookup_miss_us_mean": 27.2
+   }
+  },
+  {
+   "id": "uno-demo-50",
+   "name": "Arduino Uno Demo (50 Embedded Globals)",
+   "baseline": {
+    "n": 50,
+    "stored": 49,
+    "refused": 1,
+    "stopped": "out_of_ram",
+    "table_bytes": 1404,
+    "heap_bytes": 1276,
+    "min_free_ram": 264,
+    "insert_us_mean": 58.37,
+    "lookup_hit_us_mean": 33.91,
+    "lookup_miss_us_mean": 36.85
+   },
+   "AB": {
+    "n": 50,
+    "stored": 50,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 1033,
+    "heap_bytes": 0,
+    "min_free_ram": 491,
+    "insert_us_mean": 69.36,
+    "lookup_hit_us_mean": 35.72,
+    "lookup_miss_us_mean": 37.5
+   },
+   "ABC": {
+    "n": 50,
+    "stored": 50,
+    "refused": 0,
+    "stopped": "none",
+    "table_bytes": 1065,
+    "heap_bytes": 0,
+    "min_free_ram": 484,
+    "insert_us_mean": 95.04,
+    "lookup_hit_us_mean": 40.91,
+    "lookup_miss_us_mean": 37.6
+   }
+  }
+ ],
+ "sims": [
+  {
+   "variant": "baseline",
+   "pattern": "realistic",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 386.4,
+   "insert_us_mean": 57.28,
+   "lookup_hit_us_mean": 32.79
+  },
+  {
+   "variant": "baseline",
+   "pattern": "realistic",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 666.9,
+   "insert_us_mean": 60.62,
+   "lookup_hit_us_mean": 36.48
+  },
+  {
+   "variant": "baseline",
+   "pattern": "realistic",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 924.3,
+   "insert_us_mean": 59.96,
+   "lookup_hit_us_mean": 35.23
+  },
+  {
+   "variant": "baseline",
+   "pattern": "realistic",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1179.5,
+   "insert_us_mean": 58.87,
+   "lookup_hit_us_mean": 34.7
+  },
+  {
+   "variant": "baseline",
+   "pattern": "realistic",
+   "n": 50,
+   "programs": 10,
+   "held_all": 1,
+   "table_bytes_mean": 1410.0,
+   "insert_us_mean": 59.15,
+   "lookup_hit_us_mean": 35.23
+  },
+  {
+   "variant": "baseline",
+   "pattern": "random",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 424.1,
+   "insert_us_mean": 69.84,
+   "lookup_hit_us_mean": 44.22
+  },
+  {
+   "variant": "baseline",
+   "pattern": "random",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 726.9,
+   "insert_us_mean": 70.9,
+   "lookup_hit_us_mean": 45.29
+  },
+  {
+   "variant": "baseline",
+   "pattern": "random",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1034.3,
+   "insert_us_mean": 72.11,
+   "lookup_hit_us_mean": 46.36
+  },
+  {
+   "variant": "baseline",
+   "pattern": "random",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1334.2,
+   "insert_us_mean": 71.61,
+   "lookup_hit_us_mean": 46.34
+  },
+  {
+   "variant": "baseline",
+   "pattern": "random",
+   "n": 50,
+   "programs": 10,
+   "held_all": 0,
+   "table_bytes_mean": null,
+   "insert_us_mean": 70.73,
+   "lookup_hit_us_mean": 45.77
+  },
+  {
+   "variant": "baseline",
+   "pattern": "scoped",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 357.2,
+   "insert_us_mean": 48.0,
+   "lookup_hit_us_mean": 23.99
+  },
+  {
+   "variant": "baseline",
+   "pattern": "scoped",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 601.9,
+   "insert_us_mean": 50.64,
+   "lookup_hit_us_mean": 27.12
+  },
+  {
+   "variant": "baseline",
+   "pattern": "scoped",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 835.3,
+   "insert_us_mean": 50.25,
+   "lookup_hit_us_mean": 27.97
+  },
+  {
+   "variant": "baseline",
+   "pattern": "scoped",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1062.8,
+   "insert_us_mean": 49.35,
+   "lookup_hit_us_mean": 27.95
+  },
+  {
+   "variant": "baseline",
+   "pattern": "scoped",
+   "n": 50,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1298.1,
+   "insert_us_mean": 49.35,
+   "lookup_hit_us_mean": 28.66
+  },
+  {
+   "variant": "AB",
+   "pattern": "realistic",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 306.4,
+   "insert_us_mean": 68.24,
+   "lookup_hit_us_mean": 34.1
+  },
+  {
+   "variant": "AB",
+   "pattern": "realistic",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 506.9,
+   "insert_us_mean": 72.54,
+   "lookup_hit_us_mean": 37.96
+  },
+  {
+   "variant": "AB",
+   "pattern": "realistic",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 684.3,
+   "insert_us_mean": 71.19,
+   "lookup_hit_us_mean": 36.7
+  },
+  {
+   "variant": "AB",
+   "pattern": "realistic",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 859.5,
+   "insert_us_mean": 70.0,
+   "lookup_hit_us_mean": 36.31
+  },
+  {
+   "variant": "AB",
+   "pattern": "realistic",
+   "n": 50,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1051.9,
+   "insert_us_mean": 70.74,
+   "lookup_hit_us_mean": 37.1
+  },
+  {
+   "variant": "AB",
+   "pattern": "random",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 344.1,
+   "insert_us_mean": 81.36,
+   "lookup_hit_us_mean": 45.59
+  },
+  {
+   "variant": "AB",
+   "pattern": "random",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 566.9,
+   "insert_us_mean": 82.6,
+   "lookup_hit_us_mean": 46.69
+  },
+  {
+   "variant": "AB",
+   "pattern": "random",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 794.3,
+   "insert_us_mean": 83.28,
+   "lookup_hit_us_mean": 47.9
+  },
+  {
+   "variant": "AB",
+   "pattern": "random",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 1014.2,
+   "insert_us_mean": 82.93,
+   "lookup_hit_us_mean": 47.99
+  },
+  {
+   "variant": "AB",
+   "pattern": "random",
+   "n": 50,
+   "programs": 10,
+   "held_all": 3,
+   "table_bytes_mean": 1187.7,
+   "insert_us_mean": 82.32,
+   "lookup_hit_us_mean": 47.63
+  },
+  {
+   "variant": "AB",
+   "pattern": "scoped",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 277.2,
+   "insert_us_mean": 58.84,
+   "lookup_hit_us_mean": 25.34
+  },
+  {
+   "variant": "AB",
+   "pattern": "scoped",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 441.9,
+   "insert_us_mean": 61.6,
+   "lookup_hit_us_mean": 28.54
+  },
+  {
+   "variant": "AB",
+   "pattern": "scoped",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 595.3,
+   "insert_us_mean": 61.04,
+   "lookup_hit_us_mean": 29.56
+  },
+  {
+   "variant": "AB",
+   "pattern": "scoped",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 742.8,
+   "insert_us_mean": 60.4,
+   "lookup_hit_us_mean": 29.57
+  },
+  {
+   "variant": "AB",
+   "pattern": "scoped",
+   "n": 50,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 898.1,
+   "insert_us_mean": 60.44,
+   "lookup_hit_us_mean": 30.42
+  },
+  {
+   "variant": "ABC",
+   "pattern": "realistic",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 224.8,
+   "insert_us_mean": 83.8,
+   "lookup_hit_us_mean": 32.97
+  },
+  {
+   "variant": "ABC",
+   "pattern": "realistic",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 444.0,
+   "insert_us_mean": 91.8,
+   "lookup_hit_us_mean": 38.43
+  },
+  {
+   "variant": "ABC",
+   "pattern": "realistic",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 651.0,
+   "insert_us_mean": 91.32,
+   "lookup_hit_us_mean": 38.04
+  },
+  {
+   "variant": "ABC",
+   "pattern": "realistic",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 867.1,
+   "insert_us_mean": 93.25,
+   "lookup_hit_us_mean": 39.51
+  },
+  {
+   "variant": "ABC",
+   "pattern": "realistic",
+   "n": 50,
+   "programs": 10,
+   "held_all": 8,
+   "table_bytes_mean": 1067.5,
+   "insert_us_mean": 95.63,
+   "lookup_hit_us_mean": 41.1
+  },
+  {
+   "variant": "ABC",
+   "pattern": "random",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 291.3,
+   "insert_us_mean": 76.08,
+   "lookup_hit_us_mean": 32.36
+  },
+  {
+   "variant": "ABC",
+   "pattern": "random",
+   "n": 20,
+   "programs": 10,
+   "held_all": 9,
+   "table_bytes_mean": 592.7,
+   "insert_us_mean": 85.59,
+   "lookup_hit_us_mean": 39.17
+  },
+  {
+   "variant": "ABC",
+   "pattern": "random",
+   "n": 30,
+   "programs": 10,
+   "held_all": 0,
+   "table_bytes_mean": null,
+   "insert_us_mean": 85.26,
+   "lookup_hit_us_mean": 39.17
+  },
+  {
+   "variant": "ABC",
+   "pattern": "random",
+   "n": 40,
+   "programs": 10,
+   "held_all": 0,
+   "table_bytes_mean": null,
+   "insert_us_mean": 85.9,
+   "lookup_hit_us_mean": 39.41
+  },
+  {
+   "variant": "ABC",
+   "pattern": "random",
+   "n": 50,
+   "programs": 10,
+   "held_all": 0,
+   "table_bytes_mean": null,
+   "insert_us_mean": 86.33,
+   "lookup_hit_us_mean": 39.56
+  },
+  {
+   "variant": "ABC",
+   "pattern": "scoped",
+   "n": 10,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 210.1,
+   "insert_us_mean": 71.4,
+   "lookup_hit_us_mean": 25.81
+  },
+  {
+   "variant": "ABC",
+   "pattern": "scoped",
+   "n": 20,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 403.1,
+   "insert_us_mean": 78.7,
+   "lookup_hit_us_mean": 31.07
+  },
+  {
+   "variant": "ABC",
+   "pattern": "scoped",
+   "n": 30,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 578.0,
+   "insert_us_mean": 81.44,
+   "lookup_hit_us_mean": 33.74
+  },
+  {
+   "variant": "ABC",
+   "pattern": "scoped",
+   "n": 40,
+   "programs": 10,
+   "held_all": 10,
+   "table_bytes_mean": 754.5,
+   "insert_us_mean": 83.49,
+   "lookup_hit_us_mean": 35.15
+  },
+  {
+   "variant": "ABC",
+   "pattern": "scoped",
+   "n": 50,
+   "programs": 10,
+   "held_all": 5,
+   "table_bytes_mean": 966.4,
+   "insert_us_mean": 84.98,
+   "lookup_hit_us_mean": 36.47
+  }
+ ],
+ "model": {
+  "baseline_free_plus_heap": 1540,
+  "ram_reserve": 256,
+  "pools": {
+   "AB": {
+    "nodes": 50,
+    "chars": 671
+   },
+   "ABC": {
+    "nodes": 67,
+    "chars": 272,
+    "meta": 54,
+    "shadows": 10
+   },
+   "budget": 1200
+  },
+  "variants": {
+   "baseline": {
+    "insert": {
+     "coef": [
+      28.61065,
+      3.27279,
+      -0.006
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "stored_before"
+     ],
+     "sd_symbol": 2.174,
+     "sd_program": 0.465,
+     "sd_cross_validated": 0.488,
+     "sd_band": 0.488,
+     "r2": 0.9802,
+     "n_rows": 4405,
+     "n_programs": 150
+    },
+    "lookup_hit": {
+     "coef": [
+      5.88544,
+      3.02441,
+      0.01815
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "table_n"
+     ],
+     "sd_symbol": 1.475,
+     "sd_program": 0.243,
+     "sd_cross_validated": 0.258,
+     "sd_band": 0.258,
+     "r2": 0.9886,
+     "n_rows": 4177,
+     "n_programs": 150
+    },
+    "lookup_miss": {
+     "coef": [
+      4.22992,
+      2.52399,
+      0.03753
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "table_n"
+     ],
+     "sd_symbol": 1.946,
+     "sd_program": 0.583,
+     "sd_cross_validated": 0.613,
+     "sd_band": 0.613,
+     "r2": 0.9687,
+     "n_rows": 1500,
+     "n_programs": 150
+    }
+   },
+   "AB": {
+    "insert": {
+     "coef": [
+      39.11122,
+      3.33871,
+      0.00029
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "stored_before"
+     ],
+     "sd_symbol": 2.261,
+     "sd_program": 0.48,
+     "sd_cross_validated": 0.481,
+     "sd_band": 0.481,
+     "r2": 0.9795,
+     "n_rows": 4477,
+     "n_programs": 150
+    },
+    "lookup_hit": {
+     "coef": [
+      7.13752,
+      3.02385,
+      0.02757
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "table_n"
+     ],
+     "sd_symbol": 2.164,
+     "sd_program": 0.348,
+     "sd_cross_validated": 0.362,
+     "sd_band": 0.362,
+     "r2": 0.9759,
+     "n_rows": 4249,
+     "n_programs": 150
+    },
+    "lookup_miss": {
+     "coef": [
+      4.19778,
+      2.52858,
+      0.05516
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "table_n"
+     ],
+     "sd_symbol": 2.793,
+     "sd_program": 0.824,
+     "sd_cross_validated": 0.858,
+     "sd_band": 0.858,
+     "r2": 0.9383,
+     "n_rows": 1500,
+     "n_programs": 150
+    }
+   },
+   "ABC": {
+    "insert": {
+     "coef": [
+      50.88073,
+      0.86101,
+      2.81384,
+      2.60264,
+      12.04754
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "scans",
+      "compares",
+      "split"
+     ],
+     "sd_symbol": 3.466,
+     "sd_program": 1.076,
+     "sd_cross_validated": 2.283,
+     "sd_band": 2.283,
+     "r2": 0.9468,
+     "n_rows": 3904,
+     "n_programs": 150
+    },
+    "lookup_hit": {
+     "coef": [
+      7.17495,
+      0.94357,
+      1.88549,
+      3.08192
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "scans",
+      "depth"
+     ],
+     "sd_symbol": 0.206,
+     "sd_program": 0.04,
+     "sd_cross_validated": 0.043,
+     "sd_band": 0.043,
+     "r2": 0.9995,
+     "n_rows": 3686,
+     "n_programs": 150
+    },
+    "lookup_miss": {
+     "coef": [
+      6.89119,
+      -0.04819,
+      1.85682,
+      0.99781,
+      3.12655
+     ],
+     "x": [
+      "1",
+      "name_len",
+      "scans",
+      "compares",
+      "depth"
+     ],
+     "sd_symbol": 0.358,
+     "sd_program": 0.105,
+     "sd_cross_validated": 0.11,
+     "sd_band": 0.11,
+     "r2": 0.9974,
+     "n_rows": 1500,
+     "n_programs": 150
+    }
+   }
+  },
+  "validation": [
+   {
+    "variant": "baseline",
+    "preset": "embedded-prototype-30",
+    "insert_measured": 57.73,
+    "insert_predicted": 57.22,
+    "lookup_measured": 33.17,
+    "lookup_predicted": 32.94,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "baseline",
+    "preset": "uart-driver-locals",
+    "insert_measured": 48.18,
+    "insert_predicted": 48.48,
+    "lookup_measured": 28.23,
+    "lookup_predicted": 28.21,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "baseline",
+    "preset": "can-bus-controller",
+    "insert_measured": 85.71,
+    "insert_predicted": 84.99,
+    "lookup_measured": 58.43,
+    "lookup_predicted": 58.56,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "baseline",
+    "preset": "nested-scopes-c",
+    "insert_measured": 73.09,
+    "insert_predicted": 74.1,
+    "lookup_measured": 48.56,
+    "lookup_predicted": 48.76,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "baseline",
+    "preset": "random-worst-case",
+    "insert_measured": 42.33,
+    "insert_predicted": 42.18,
+    "lookup_measured": 19.1,
+    "lookup_predicted": 18.92,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "baseline",
+    "preset": "uno-demo-50",
+    "insert_measured": 58.37,
+    "insert_predicted": 58.06,
+    "lookup_measured": 33.91,
+    "lookup_predicted": 34.12,
+    "insert_half_range": 0.98,
+    "lookup_half_range": 0.52
+   },
+   {
+    "variant": "AB",
+    "preset": "embedded-prototype-30",
+    "insert_measured": 68.13,
+    "insert_predicted": 68.38,
+    "lookup_measured": 34.82,
+    "lookup_predicted": 34.47,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "AB",
+    "preset": "uart-driver-locals",
+    "insert_measured": 59.64,
+    "insert_predicted": 59.45,
+    "lookup_measured": 29.59,
+    "lookup_predicted": 29.67,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "AB",
+    "preset": "can-bus-controller",
+    "insert_measured": 96.57,
+    "insert_predicted": 96.71,
+    "lookup_measured": 59.82,
+    "lookup_predicted": 60.07,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "AB",
+    "preset": "nested-scopes-c",
+    "insert_measured": 86.91,
+    "insert_predicted": 85.55,
+    "lookup_measured": 49.81,
+    "lookup_predicted": 50.11,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "AB",
+    "preset": "random-worst-case",
+    "insert_measured": 52.5,
+    "insert_predicted": 53.03,
+    "lookup_measured": 20.64,
+    "lookup_predicted": 20.4,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "AB",
+    "preset": "uno-demo-50",
+    "insert_measured": 69.36,
+    "insert_predicted": 69.5,
+    "lookup_measured": 35.72,
+    "lookup_predicted": 36.03,
+    "insert_half_range": 0.96,
+    "lookup_half_range": 0.72
+   },
+   {
+    "variant": "ABC",
+    "preset": "embedded-prototype-30",
+    "insert_measured": 84.8,
+    "insert_predicted": 86.48,
+    "lookup_measured": 34.92,
+    "lookup_predicted": 34.95,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   },
+   {
+    "variant": "ABC",
+    "preset": "uart-driver-locals",
+    "insert_measured": 74.73,
+    "insert_predicted": 77.48,
+    "lookup_measured": 29.5,
+    "lookup_predicted": 29.49,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   },
+   {
+    "variant": "ABC",
+    "preset": "can-bus-controller",
+    "insert_measured": 97.71,
+    "insert_predicted": 104.27,
+    "lookup_measured": 45.21,
+    "lookup_predicted": 45.21,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   },
+   {
+    "variant": "ABC",
+    "preset": "nested-scopes-c",
+    "insert_measured": 83.27,
+    "insert_predicted": 86.59,
+    "lookup_measured": 34.81,
+    "lookup_predicted": 34.77,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   },
+   {
+    "variant": "ABC",
+    "preset": "random-worst-case",
+    "insert_measured": 86.17,
+    "insert_predicted": 86.32,
+    "lookup_measured": 35.79,
+    "lookup_predicted": 35.85,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   },
+   {
+    "variant": "ABC",
+    "preset": "uno-demo-50",
+    "insert_measured": 95.04,
+    "insert_predicted": 93.81,
+    "lookup_measured": 40.91,
+    "lookup_predicted": 40.89,
+    "insert_half_range": 4.57,
+    "lookup_half_range": 0.09
+   }
+  ]
+ }
+}

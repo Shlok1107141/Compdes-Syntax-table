@@ -83,6 +83,13 @@ jobs:
       - name: Benchmark logic on the PC under sanitizers (all 8 structures)
         run: sh firmware/tools/host_test.sh
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: The website's Uno model reproduces every board run
+        run: node frontend/scripts/check_uno_model.ts
+
       - name: Install arduino-cli
         uses: arduino/setup-arduino-cli@v2
 

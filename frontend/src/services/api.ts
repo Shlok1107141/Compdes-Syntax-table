@@ -21,6 +21,17 @@ export function offlineResultFor(code: string): AnalyzeResponse | null {
 }
 
 /**
+ * The declared names of `code`, in declaration order. Exact (the engine's own
+ * output) for the built-in samples; otherwise the browser's approximate parser,
+ * which does not handle every C declaration form.
+ */
+export function declaredNames(code: string): { names: string[]; source: 'engine' | 'approximate' } {
+  const exact = offlineResultFor(code);
+  if (exact) return { names: exact.symbol_table.map((s) => s.name), source: 'engine' };
+  return { names: extractSymbolsFromCode(code).map((s) => s.name), source: 'approximate' };
+}
+
+/**
  * Client-side C parser and compression model for custom user-written C code
  * when running offline without a live backend.
  */
