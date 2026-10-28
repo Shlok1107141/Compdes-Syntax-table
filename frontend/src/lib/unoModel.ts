@@ -52,6 +52,12 @@ export interface UnoPrediction {
   lookupUs: Range | null;
 }
 
+/** Bytes the textbook table needs on the Uno for these declarations (it matched
+ * every baseline the board measured; backend/hardware_uno.py has the same formula). */
+export function avrBaselineBytes(names: string[]): number {
+  return 128 + names.reduce((s, n) => s + 12 + 2 + n.length + 1 + 2, 0);
+}
+
 /* ---- the textbook table on avr-libc: 64 two-byte buckets, then per declaration a
  * 12 B node and a name copy, each malloc block with a 2 B header. It stops when
  * the free RAM between heap and stack would drop below the reserve. ---- */

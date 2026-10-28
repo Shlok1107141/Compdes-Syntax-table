@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  AlertTriangle, CheckCircle2, Cpu, Database, Play, Power, RefreshCw, RotateCcw, Save, Search, Square, Upload, XCircle,
+  AlertTriangle, CheckCircle2, Cpu, Database, Info, Play, Power, RefreshCw, RotateCcw, Save, Search, Square, Upload, Usb,
+  XCircle,
 } from 'lucide-react';
 import { SAMPLE_PRESETS } from '../data/sampleCodes';
 import recorded from '../data/unoResults.json';
 import {
-  listSerialPorts, runOnUno, unoDisconnect, unoLoad, unoLookup, unoReset, unoSave, unoStatus,
+  boardProgram, listSerialPorts, runOnUno, unoDisconnect, unoLoad, unoLookup, unoReset, unoSave, unoStatus,
 } from '../services/api';
+import { WebSerialUno, webSerialSupported } from '../services/webSerialUno';
 import type { SerialPortInfo, UnoLiveEvent, UnoStatus } from '../types';
 
 type StartEvent = Extract<UnoLiveEvent, { event: 'start' }>;
@@ -67,6 +69,11 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
   const [status, setStatus] = useState<UnoStatus | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  /** Board opened by this page over Web Serial (no backend needed), or null. */
+  const [usb, setUsb] = useState<WebSerialUno | null>(null);
+  /** null: not checked yet; false: no local backend (e.g. on GitHub Pages). */
+  const [backendUp, setBackendUp] = useState<boolean | null>(null);
+  const usbMode = usb !== null || backendUp === false;
 
   const [source, setSource] = useState('uno-demo-50');
   const [delayMs, setDelayMs] = useState(120);
@@ -96,6 +103,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
   const scan = useCallback((current: string) =>
     listSerialPorts()
       .then((res) => {
+        setBackendUp(true);
         const chosen = current && res.ports.some((p) => p.device === current)
           ? current
           : res.ports.find((p) => p.likely_board?.startsWith('Arduino'))?.device ?? res.ports[0]?.device ?? '';
@@ -108,7 +116,46 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
         }
         return connect(chosen);
       })
-      .catch((err) => { setPorts([]); setStatus(null); setBoardError(message(err)); }), [connect]);
+      .catch((err) => {
+        // No local backend (e.g. on GitHub Pages): this page can open the board itself.
+        setPorts([]);
+        setStatus(null);
+        setBackendUp(false);
+        setBoardError(webSerialSupported() ? null
+          : `${message(err)} Or open this page in Chrome or Edge, which can connect to the Uno directly.`);
+      }), [connect]);
+
+  /** Ask the browser for the board's port and open it here (Web Serial). */
+  const connectUsb = async () => {
+    setBusy('Pick the Uno in the browser\'s list (it restarts when the port opens)');
+    setBoardError(null);
+    const asked = Date.now();
+    try {
+      const board = await WebSerialUno.connect();
+      setUsb(board);
+      setStatus(await board.status());
+    } catch (err) {
+      setStatus(null);
+      if (err instanceof DOMException && err.name === 'NotFoundError') {
+        // The user closed the list without choosing; if it closed at once, no list was shown at all.
+        if (Date.now() - asked < 800) {
+          setBoardError('No port list appeared. Open this page in Google Chrome or Microsoft Edge to connect the Uno.');
+        }
+      } else {
+        setBoardError(message(err));
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const disconnectUsb = async () => {
+    await usb?.close();
+    setUsb(null);
+    setStatus(null);
+  };
+
+  useEffect(() => () => { void usb?.close(); }, [usb]);
 
   useEffect(() => {
     void scan('');
@@ -124,7 +171,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
   const note = (ok: boolean, text: string) => setLog((l) => [{ ok, text }, ...l].slice(0, 12));
 
   const run = async () => {
-    if (!port || !code.trim()) return;
+    if ((!usb && !port) || !code.trim()) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -133,13 +180,19 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
     setRows([]);
     setDone(null);
     setRunError(null);
+    const onEvent = (e: UnoLiveEvent) => {
+      if (e.event === 'start') setStart(e);
+      else if (e.event === 'symbol') setRows((r) => [...r, e]);
+      else if (e.event === 'done') setDone(e);
+      else setRunError(e.detail);
+    };
     try {
-      await runOnUno(code, port, delayMs, (e) => {
-        if (e.event === 'start') setStart(e);
-        else if (e.event === 'symbol') setRows((r) => [...r, e]);
-        else if (e.event === 'done') setDone(e);
-        else setRunError(e.detail);
-      }, ctrl.signal);
+      if (usb) {
+        const prog = boardProgram(code);
+        await usb.runLive(prog.symbols, prog.pc, delayMs, onEvent, ctrl.signal);
+      } else {
+        await runOnUno(code, port, delayMs, onEvent, ctrl.signal);
+      }
     } catch (err) {
       if (!ctrl.signal.aborted) setRunError(message(err));
     } finally {
@@ -193,30 +246,46 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
             <div>
               <h2 className="text-lg font-black text-slate-900">Arduino Uno: live symbol table</h2>
               <p className="text-xs font-semibold text-slate-600 mt-0.5 max-w-2xl">
-                The PC parses the C code; the Uno (ATmega328P, 2,048 B RAM) inserts each declaration into the
+                This computer parses the C code; the Uno (ATmega328P, 2,048 B RAM) inserts each declaration into the
                 structure it was flashed with and reports what that cost.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select value={port} onChange={(e) => { setPort(e.target.value); void connect(e.target.value); }}
-              disabled={running || busy !== null}
-              className="px-2 py-2 border-2 border-slate-300 rounded-lg text-xs font-bold bg-white">
-              {ports.length === 0 && <option value="">no ports</option>}
-              {ports.map((p) => (
-                <option key={p.device} value={p.device}>
-                  {p.device} {p.likely_board ? `· ${p.likely_board}` : `· ${p.description}`}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={() => void scan(port)}
-              disabled={running || busy !== null}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
-              <RefreshCw className="w-4 h-4" /> Refresh
-            </button>
+            {usbMode ? (
+              usb ? (
+                <button type="button" onClick={() => void disconnectUsb()} disabled={running || busy !== null}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
+                  <Usb className="w-4 h-4" /> Disconnect
+                </button>
+              ) : (
+                <button type="button" onClick={() => void connectUsb()} disabled={busy !== null || !webSerialSupported()}
+                  className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-black text-sm border-2 border-teal-900 flex items-center gap-2 disabled:opacity-50 cursor-pointer">
+                  <Usb className="w-4 h-4" /> Connect Uno (USB)
+                </button>
+              )
+            ) : (
+              <>
+                <select value={port} onChange={(e) => { setPort(e.target.value); void connect(e.target.value); }}
+                  disabled={running || busy !== null}
+                  className="px-2 py-2 border-2 border-slate-300 rounded-lg text-xs font-bold bg-white">
+                  {ports.length === 0 && <option value="">no ports</option>}
+                  {ports.map((p) => (
+                    <option key={p.device} value={p.device}>
+                      {p.device} {p.likely_board ? `· ${p.likely_board}` : `· ${p.description}`}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => void scan(port)}
+                  disabled={running || busy !== null}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </>
+            )}
             <button type="button" disabled={disabled}
               onClick={() => act('Resetting', async () => {
-                const s = await unoReset(port);
+                const s = usb ? await usb.reset() : await unoReset(port);
                 setStatus(s);
                 setStart(null);                 // the table that run built is gone with the RAM
                 setRows([]);
@@ -226,16 +295,18 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
               className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
               <RotateCcw className="w-4 h-4" /> Reset board
             </button>
-            <button type="button" disabled={!status || running || busy !== null}
-              onClick={() => act('Releasing port', async () => {
-                await unoDisconnect();
-                setStatus(null);
-                setBoardError(`Port released. Flash another structure with: python firmware/tools/flash.py ABC --port ${port} — then press Refresh.`);
-                return 'Port released for flashing.';
-              })}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
-              <Power className="w-4 h-4" /> Release port
-            </button>
+            {!usbMode && (
+              <button type="button" disabled={!status || running || busy !== null}
+                onClick={() => act('Releasing port', async () => {
+                  await unoDisconnect();
+                  setStatus(null);
+                  setBoardError(`Port released. Flash another structure with: python firmware/tools/flash.py ABC --port ${port} — then press Refresh.`);
+                  return 'Port released for flashing.';
+                })}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-xs border-2 border-slate-300 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
+                <Power className="w-4 h-4" /> Release port
+              </button>
+            )}
           </div>
         </div>
 
@@ -263,6 +334,16 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
           <div className="mt-3 p-3 rounded-lg bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs font-semibold flex gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{boardError}</span>
+          </div>
+        )}
+        {usbMode && !usb && !boardError && (
+          <div className="mt-3 p-3 rounded-lg bg-sky-50 border-2 border-sky-300 text-sky-950 text-xs font-semibold flex gap-2">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>
+              Plug the Uno into this computer by USB and click <b>Connect Uno (USB)</b>; the browser asks which port to use
+              (pick the USB-SERIAL CH340 one). It needs Chrome or Edge, and the board must run the uno_bench firmware. Close
+              the Arduino IDE Serial Monitor first: only one program can hold the port.
+            </span>
           </div>
         )}
       </div>
@@ -367,15 +448,22 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
               sub={done ? (done.refused ? `${done.refused} refused` : 'every declaration stored and verified') : running ? 'inserting…' : ''} />
             <Tile source="LIVE" label="Table on the Uno" value={`${tableBytes} B`}
               sub={avgInsert !== null ? `${avgInsert.toFixed(0)} µs per insert on average (16 MHz)` : undefined} />
+            <Tile source="LIVE" label="Name lookup on the Uno"
+              value={done?.lookup_us_mean != null ? `${done.lookup_us_mean.toFixed(1)} µs` : '—'}
+              sub={done?.lookup_us_mean != null ? 'mean time to find a stored name, timed on the board'
+                : done ? 'not measured in this run' : 'measured when the inserts finish'} />
             <Tile source="MODEL" label="Textbook table, same symbols"
               value={done?.avr_baseline_model_bytes != null ? `${done.avr_baseline_model_bytes} B` : '—'}
               sub={done?.saving_vs_model_pct != null
                 ? `the Uno's table is ${done.saving_vs_model_pct.toFixed(1)}% smaller`
                 : done ? 'this board runs the textbook table itself' : 'shown when the run ends'} />
-            <Tile source="PC" label="Same program on a 64-bit PC"
-              value={`${start.pc.baseline_bytes} → ${start.pc.compressed_bytes} B`}
-              sub={`${start.pc.savings_pct.toFixed(1)}% smaller: pointers are 8 B there, 2 B here`} />
           </div>
+          {start.pc && (
+            <p className="text-xs font-semibold text-slate-600 flex items-center gap-2">
+              <SourceBadge source="PC" /> The same program on a 64-bit PC: {start.pc.baseline_bytes} → {start.pc.compressed_bytes} B
+              ({start.pc.savings_pct.toFixed(1)}% smaller), because pointers there are 8 B instead of 2 B.
+            </p>
+          )}
 
           {firstRefused && (
             <div className="p-4 rounded-xl bg-rose-50 border-2 border-rose-400 text-rose-900 text-sm font-bold flex gap-2">
@@ -451,7 +539,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={disabled}
             onClick={() => act('Saving', async () => {
-              const r = await unoSave(port);
+              const r = usb ? await usb.save() : await unoSave(port);
               return `Saved ${r.symbols} symbols: ${r.snapshot_bytes} B written to EEPROM in ${r.save_ms.toFixed(0)} ms.`;
             })}
             className="px-3 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-bold text-xs border-2 border-teal-900 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
@@ -459,7 +547,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
           </button>
           <button type="button" disabled={disabled}
             onClick={() => act('Loading', async () => {
-              const r = await unoLoad(port);
+              const r = usb ? await usb.load() : await unoLoad(port);
               return `Loaded ${r.symbols} symbols (${r.table_bytes} B table) from EEPROM in ${r.load_ms.toFixed(1)} ms.`;
             })}
             className="px-3 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg font-bold text-xs border-2 border-teal-900 flex items-center gap-1 disabled:opacity-50 cursor-pointer">
@@ -470,7 +558,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
               e.preventDefault();
               const name = lookupName.trim();
               if (name) void act('Looking up', async () => {
-                const r = await unoLookup(port, name);
+                const r = usb ? await usb.lookup(name) : await unoLookup(port, name);
                 return r.found
                   ? `${r.name}: FOUND on the board${r.declarations ? ` (${r.declarations} declaration${r.declarations > 1 ? 's' : ''})` : ''}.`
                   : `${r.name}: not in the board's table.`;
