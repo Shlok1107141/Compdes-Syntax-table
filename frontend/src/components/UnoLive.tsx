@@ -10,6 +10,7 @@ import {
   boardProgram, listSerialPorts, runOnUno, unoDisconnect, unoLoad, unoLookup, unoReset, unoSave, unoStatus,
 } from '../services/api';
 import { WebSerialUno, webSerialSupported } from '../services/webSerialUno';
+import { UnoComparison } from './UnoComparison';
 import type { SerialPortInfo, UnoLiveEvent, UnoStatus } from '../types';
 
 type StartEvent = Extract<UnoLiveEvent, { event: 'start' }>;
@@ -442,7 +443,7 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
           </div>
 
           {/* Tiles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Tile source="LIVE" label="Symbols stored"
               value={<>{done?.stored ?? latest?.stored ?? 0}<span className="text-base text-slate-500"> / {start.total}</span></>}
               sub={done ? (done.refused ? `${done.refused} refused` : 'every declaration stored and verified') : running ? 'inserting…' : ''} />
@@ -452,12 +453,11 @@ export function UnoLive({ editorCode }: { editorCode: string }) {
               value={done?.lookup_us_mean != null ? `${done.lookup_us_mean.toFixed(1)} µs` : '—'}
               sub={done?.lookup_us_mean != null ? 'mean time to find a stored name, timed on the board'
                 : done ? 'not measured in this run' : 'measured when the inserts finish'} />
-            <Tile source="MODEL" label="Textbook table, same symbols"
-              value={done?.avr_baseline_model_bytes != null ? `${done.avr_baseline_model_bytes} B` : '—'}
-              sub={done?.saving_vs_model_pct != null
-                ? `the Uno's table is ${done.saving_vs_model_pct.toFixed(1)}% smaller`
-                : done ? 'this board runs the textbook table itself' : 'shown when the run ends'} />
           </div>
+          {done && (
+            <UnoComparison run={{ variant: done.variant, names: rows.map((r) => r.name), stored: done.stored,
+              tableBytes: done.table_bytes, insertUs: avgInsert, lookupUs: done.lookup_us_mean ?? null }} />
+          )}
           {start.pc && (
             <p className="text-xs font-semibold text-slate-600 flex items-center gap-2">
               <SourceBadge source="PC" /> The same program on a 64-bit PC: {start.pc.baseline_bytes} → {start.pc.compressed_bytes} B
