@@ -37,7 +37,7 @@ make -s --no-print-directory -C engine run > "$OUT/variants.txt"
 same "$OUT/variants.txt" "$SAMPLES/variants.txt" "variant outputs"
 
 step "Scaling sweep: n = 10..1000, three naming patterns (Table 6, Figure 6)"
-OUT="$OUT/results.csv" engine/run_sweep.sh > "$OUT/sweep_table.txt"
+OUT="$OUT/results.csv" sh engine/run_sweep.sh > "$OUT/sweep_table.txt"
 same "$OUT/results.csv" engine/results.csv "engine/results.csv (168 rows)"
 
 step "API example: the 4-declaration program from the README"
