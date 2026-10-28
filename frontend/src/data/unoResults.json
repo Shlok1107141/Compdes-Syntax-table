@@ -1,0 +1,150 @@
+{
+  "source": "firmware/results: measured on the Arduino Uno by firmware/tools/collect.py; written by firmware/tools/summarize_uno.py --json",
+  "same_symbols": [
+    {
+      "set": "proto30",
+      "n": 30,
+      "uno_baseline_bytes": 901,
+      "uno_baseline_held": 30,
+      "uno_abc_bytes": 669,
+      "pc_baseline_bytes": 2725,
+      "pc_abc_bytes": 669
+    },
+    {
+      "set": "esp32_sensor",
+      "n": 23,
+      "uno_baseline_bytes": 833,
+      "uno_baseline_held": 23,
+      "uno_abc_bytes": 570,
+      "pc_baseline_bytes": 2321,
+      "pc_abc_bytes": 570
+    },
+    {
+      "set": "realistic50",
+      "n": 50,
+      "uno_baseline_bytes": null,
+      "uno_baseline_held": 44,
+      "uno_abc_bytes": 1065,
+      "pc_baseline_bytes": 4217,
+      "pc_abc_bytes": 1065
+    },
+    {
+      "set": "random50",
+      "n": 50,
+      "uno_baseline_bytes": null,
+      "uno_baseline_held": 38,
+      "uno_abc_bytes": null,
+      "pc_baseline_bytes": 4383,
+      "pc_abc_bytes": 1467
+    },
+    {
+      "set": "scoped50",
+      "n": 50,
+      "uno_baseline_bytes": null,
+      "uno_baseline_held": 49,
+      "uno_abc_bytes": 1008,
+      "pc_baseline_bytes": 4106,
+      "pc_abc_bytes": 1008
+    }
+  ],
+  "capacity": [
+    {
+      "variant": "baseline",
+      "fit_budget": 41,
+      "max_held": 46,
+      "stop": "out_of_ram"
+    },
+    {
+      "variant": "A",
+      "fit_budget": 49,
+      "max_held": 55,
+      "stop": "out_of_ram"
+    },
+    {
+      "variant": "B",
+      "fit_budget": 48,
+      "max_held": 48,
+      "stop": "arena_full"
+    },
+    {
+      "variant": "C",
+      "fit_budget": 38,
+      "max_held": 42,
+      "stop": "out_of_ram"
+    },
+    {
+      "variant": "AB",
+      "fit_budget": 50,
+      "max_held": 50,
+      "stop": "arena_full"
+    },
+    {
+      "variant": "AC",
+      "fit_budget": 48,
+      "max_held": 53,
+      "stop": "out_of_ram"
+    },
+    {
+      "variant": "BC",
+      "fit_budget": 46,
+      "max_held": 46,
+      "stop": "arena_full"
+    },
+    {
+      "variant": "ABC",
+      "fit_budget": 54,
+      "max_held": 54,
+      "stop": "arena_full"
+    }
+  ],
+  "speed": [
+    {
+      "variant": "baseline",
+      "workload": "proto30",
+      "insert_us": 55.5,
+      "lookup_us": 37.9
+    },
+    {
+      "variant": "A",
+      "workload": "proto30",
+      "insert_us": 76.5,
+      "lookup_us": 57.5
+    },
+    {
+      "variant": "B",
+      "workload": "proto30",
+      "insert_us": 42.1,
+      "lookup_us": 38.8
+    },
+    {
+      "variant": "C",
+      "workload": "proto30",
+      "insert_us": 87.7,
+      "lookup_us": 32.7
+    },
+    {
+      "variant": "AB",
+      "workload": "proto30",
+      "insert_us": 65.3,
+      "lookup_us": 59.9
+    },
+    {
+      "variant": "AC",
+      "workload": "proto30",
+      "insert_us": 101.3,
+      "lookup_us": 53.5
+    },
+    {
+      "variant": "BC",
+      "workload": "proto30",
+      "insert_us": 57.9,
+      "lookup_us": 44.9
+    },
+    {
+      "variant": "ABC",
+      "workload": "proto30",
+      "insert_us": 81.7,
+      "lookup_us": 64.0
+    }
+  ]
+}

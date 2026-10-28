@@ -70,6 +70,9 @@ speed, capacity and EEPROM persistence. Results and how to read them:
   is chosen by `BENCH_VARIANT` in `src/symtab_target.h` (7 = ABC).
 * **All eight, written to `firmware/results/`:** `python firmware/tools/collect.py --port COM3`
   then `python firmware/tools/summarize_uno.py` for the tables.
+* **Live in the app:** the Hardware tab streams a program to the board and shows each
+  insert as it happens; flash a structure with `python firmware/tools/flash.py ABC --port COM3`.
+  Demo script and checklist: [`DEMO.md`](DEMO.md).
 * `src/` holds a copy of `engine/` (`python firmware/tools/sync_engine.py`; CI checks
   it is identical) and generated symbol sets (`python firmware/tools/gen_workloads.py`).
 

@@ -19,6 +19,7 @@
 #include "bench.h"
 
 #ifdef __AVR__
+#include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #define RD_PTR(addr)  ((const void *)pgm_read_word(addr))
@@ -34,6 +35,8 @@ static long free_ram(void) { char here; return (long)(&here - heap_top()); }
 #define PSTR(s)                 (s)
 #define printf_P                printf
 #define strcpy_P                strcpy
+#define strcmp_P                strcmp
+#define strncmp_P               strncmp
 #define pgm_read_byte(p)        (*(const uint8_t *)(p))
 #define pgm_read_word(p)        (*(const uint16_t *)(p))
 #define RD_PTR(addr)            (*(addr))
@@ -284,10 +287,11 @@ static void cmd_cap(void) {
  * inserting them again. */
 #if CAN_PERSIST
 #define SNAP_MAGIC 0x5344u          /* "DS" */
+#define SNAP_LIVE  0xFFu            /* workload id of a snapshot of the live table */
 typedef struct {
     uint16_t magic;
     uint8_t  variant, workload;
-    uint16_t length, crc;
+    uint16_t count, length, crc;    /* count: declarations stored */
 } SnapHeader;
 
 static uint16_t ee_pos, ee_crc;
@@ -344,109 +348,285 @@ static int base_load(uint16_t length) {
     return 0;
 }
 #endif
-#endif /* CAN_PERSIST */
 
-static void cmd_save(uint8_t w) {
-#if CAN_PERSIST
-    SnapHeader h = { SNAP_MAGIC, BENCH_VARIANT, w, 0, 0 };
-    char label[16];
-    uint8_t stop;
-    uint16_t n;
-    unsigned long t0, us, modelled;
-    size_t length;
-    if (w >= WL_NUM) { printf_P(PSTR("# no such symbol set\n")); return; }
-    n = wl_size(w);
-    if (build(w, n, &stop) != n) { IMPL.destroy(); printf_P(PSTR("# set does not fit this build\n")); return; }
-    modelled = (unsigned long)IMPL.total_bytes();
+/* Bytes the current table needs in EEPROM, after the header. */
+static size_t snap_length(void) {
 #if BENCH_VARIANT == 0
-    length = base_save(0);
+    return base_save(0);
 #else
-    length = 4 * sizeof(uint16_t) + IMPL.total_bytes();
+    return 4 * sizeof(uint16_t) + IMPL.total_bytes();
 #endif
-    wl_label(w, label);
-    printf_P(PSTR("# variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us\n"));
-    if (sizeof h + length > EEPROM_BYTES) {
-        printf_P(PSTR("CSV,SAVE," VNAME ",%s,%u,%lu,%lu,%lu,0,0\n"), label, n, modelled,
-                 (unsigned long)length, (unsigned long)EEPROM_BYTES);
-        IMPL.destroy();
-        return;
-    }
+}
+
+/* Write the current table; returns microseconds taken. The caller checked it fits. */
+static unsigned long snap_write(uint8_t workload, uint16_t count, size_t length) {
+    SnapHeader h = { SNAP_MAGIC, BENCH_VARIANT, workload, count, (uint16_t)length, 0 };
+    unsigned long t0 = micros();
     ee_pos = sizeof h;
     ee_crc = 0xFFFFu;
-    t0 = micros();
 #if BENCH_VARIANT == 0
     base_save(1);
 #else
     abc_save(ee_put);
 #endif
-    h.length = (uint16_t)length;
     h.crc = ee_crc;
     eeprom_update_block(&h, (void *)0, sizeof h);
-    us = micros() - t0;
-    IMPL.destroy();
-    printf_P(PSTR("CSV,SAVE," VNAME ",%s,%u,%lu,%lu,%lu,1,%lu\n"), label, n, modelled,
-             (unsigned long)length, (unsigned long)EEPROM_BYTES, us);
+    return micros() - t0;
+}
+
+/* Rebuild the table from EEPROM into IMPL. Returns 0 and the header if the
+ * snapshot is this variant's and its CRC matches; otherwise -1 (table empty). */
+static int snap_read(SnapHeader *h, unsigned long *us) {
+    int loaded;
+    unsigned long t0;
+    eeprom_read_block(h, (const void *)0, sizeof *h);
+    if (h->magic != SNAP_MAGIC || h->variant != BENCH_VARIANT ||
+        (h->workload >= WL_NUM && h->workload != SNAP_LIVE) || sizeof *h + h->length > EEPROM_BYTES)
+        return -1;
+    ee_pos = sizeof *h;
+    ee_crc = 0xFFFFu;
+    t0 = micros();
+#if BENCH_VARIANT == 0
+    loaded = base_load(h->length);
+#else
+    IMPL.init();
+    loaded = abc_load(ee_get);
+#endif
+    *us = micros() - t0;
+    if (loaded != 0 || ee_crc != h->crc || ee_pos != sizeof *h + h->length) {
+        IMPL.destroy();
+        return -1;
+    }
+    return 0;
+}
+#endif /* CAN_PERSIST */
+
+/* ---- live session ----
+ * The PC sends one declaration at a time (the board has no C lexer); each is
+ * inserted into this build's structure and reported at once. The table stays
+ * in RAM between commands until another command needs the structure. */
+static uint8_t live_active, live_stop;
+static uint16_t live_n;
+static unsigned long live_h0;
+
+static void live_drop(void) {
+    if (live_active) IMPL.destroy();
+    live_active = 0;
+}
+
+static void live_start(void) {
+    live_active = 1;
+    live_stop = STOP_NONE;
+    live_n = 0;
+    live_h0 = heap_used();
+}
+
+/* RAM the program's globals take: everything below the heap. */
+static unsigned long static_ram(void) {
+#ifdef __AVR__
+    return (unsigned long)(&__heap_start - (char *)RAMSTART);
+#else
+    return 0;
+#endif
+}
+
+/* Heap the live table took (its bucket array, if any, is among the globals). */
+static unsigned long live_heap(void) { return IS_HEAP ? heap_used() - live_h0 : 0; }
+
+static void cmd_live(void) {
+    live_drop();
+    IMPL.init();
+    live_start();
+    printf_P(PSTR("LIVE,READY," VNAME ",%ld,%lu,%lu\n"), free_ram(), static_ram(), (unsigned long)STRUCT_BUDGET);
+}
+
+/* SYM <type> <scope> <storage> <offset> <name> */
+static void cmd_sym(const char *args) {
+    unsigned long f[4], t0, us = 0;
+    char name[NAME_MAX_LEN + 2], *end;
+    TestSymbol s;
+    size_t len;
+    int verified = 0;
+    for (uint8_t k = 0; k < 4; k++) {
+        f[k] = strtoul(args, &end, 10);
+        if (end == args) { printf_P(PSTR("LIVE,ERROR,bad_symbol\n")); return; }
+        args = end;
+    }
+    while (*args == ' ') args++;
+    len = strlen(args);
+    if (len == 0 || len > NAME_MAX_LEN || f[0] > 15 || f[1] > 255 || f[2] > 15 || f[3] > 65535UL) {
+        printf_P(PSTR("LIVE,ERROR,bad_symbol\n"));
+        return;
+    }
+    if (!live_active) { printf_P(PSTR("LIVE,ERROR,no_session\n")); return; }
+    memcpy(name, args, len + 1);
+    s.name = name;
+    s.type = (uint8_t)f[0]; s.scope = (uint8_t)f[1]; s.storage_class = (uint8_t)f[2]; s.offset = (uint16_t)f[3];
+
+    if (live_stop == STOP_NONE) {               /* after the first refusal, refuse the rest */
+        if (IS_HEAP && free_ram() < RAM_RESERVE + 2 * (long)len) {
+            live_stop = STOP_RAM;
+        } else {
+            t0 = micros();
+            if (IMPL.insert(&s) != 0) live_stop = STOP_ARENA;
+            us = micros() - t0;
+        }
+        if (live_stop == STOP_NONE) {
+            live_n++;
+            verified = IMPL.verify(&s);
+        }
+    }
+    printf_P(PSTR("LIVE,SYM,%u,%s,"), live_n, name);
+    if (live_stop == STOP_NONE) printf_P(PSTR("ok"));
+    else if (live_stop == STOP_ARENA) printf_P(PSTR("arena_full"));
+    else printf_P(PSTR("out_of_ram"));
+    printf_P(PSTR(",%lu,%lu,%ld,%lu,%d,%08lX\n"), (unsigned long)IMPL.total_bytes(), live_heap(), free_ram(),
+             us, verified, (unsigned long)pack_symbol(&s));
+}
+
+static void cmd_end(void) {
+    if (!live_active) { printf_P(PSTR("LIVE,ERROR,no_session\n")); return; }
+    printf_P(PSTR("LIVE,DONE,%u,%lu,%lu,%ld,%s\n"), live_n, (unsigned long)IMPL.total_bytes(), live_heap(),
+             free_ram(), stop_name(live_stop));
+}
+
+/* LOOKUP <name>: is it in the live table? ABC also says how many declarations. */
+static void cmd_lookup(const char *name) {
+    int decls = -1;
+    if (!live_active) { printf_P(PSTR("LIVE,ERROR,no_session\n")); return; }
+    if (strlen(name) == 0 || strlen(name) > NAME_MAX_LEN) { printf_P(PSTR("LIVE,ERROR,bad_name\n")); return; }
+#if BENCH_VARIANT == 7
+    {
+        uint16_t out[8];
+        decls = (int)abc_declarations(name, out, 8);
+    }
+#endif
+    if (IMPL.absent(name)) printf_P(PSTR("LIVE,LOOKUP,%s,ABSENT,%d\n"), name, decls);
+    else printf_P(PSTR("LIVE,LOOKUP,%s,FOUND,%d\n"), name, decls);
+}
+
+static void cmd_save_live(void) {
+#if CAN_PERSIST
+    size_t length;
+    if (!live_active) { printf_P(PSTR("LIVE,ERROR,no_session\n")); return; }
+    length = snap_length();
+    if (sizeof(SnapHeader) + length > EEPROM_BYTES) {
+        printf_P(PSTR("LIVE,ERROR,too_big,%lu,%lu\n"), (unsigned long)(sizeof(SnapHeader) + length),
+                 (unsigned long)EEPROM_BYTES);
+        return;
+    }
+    printf_P(PSTR("LIVE,SAVED,%u,%lu,%lu,%lu\n"), live_n, (unsigned long)(sizeof(SnapHeader) + length),
+             (unsigned long)IMPL.total_bytes(), snap_write(SNAP_LIVE, live_n, length));
+#else
+    printf_P(PSTR("LIVE,ERROR,no_persistence\n"));
+#endif
+}
+
+static void cmd_save(uint8_t w) {
+#if CAN_PERSIST
+    char label[16];
+    uint8_t stop;
+    uint16_t n;
+    unsigned long modelled;
+    size_t length;
+    if (w >= WL_NUM) { printf_P(PSTR("# no such symbol set\n")); return; }
+    n = wl_size(w);
+    if (build(w, n, &stop) != n) { IMPL.destroy(); printf_P(PSTR("# set does not fit this build\n")); return; }
+    modelled = (unsigned long)IMPL.total_bytes();
+    length = snap_length();
+    wl_label(w, label);
+    printf_P(PSTR("# variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us\n"));
+    if (sizeof(SnapHeader) + length > EEPROM_BYTES) {
+        printf_P(PSTR("CSV,SAVE," VNAME ",%s,%u,%lu,%lu,%lu,0,0\n"), label, n, modelled,
+                 (unsigned long)length, (unsigned long)EEPROM_BYTES);
+        IMPL.destroy();
+        return;
+    }
+    {
+        unsigned long us = snap_write(w, n, length);
+        IMPL.destroy();
+        printf_P(PSTR("CSV,SAVE," VNAME ",%s,%u,%lu,%lu,%lu,1,%lu\n"), label, n, modelled,
+                 (unsigned long)length, (unsigned long)EEPROM_BYTES, us);
+    }
 #else
     (void)w;
     printf_P(PSTR("# SAVE is implemented for baseline and ABC only\n"));
 #endif
 }
 
+/* A symbol-set snapshot is verified against the set and dropped (CSV,LOAD);
+ * a live snapshot becomes the live table again (LIVE,LOADED). */
 static void cmd_load(void) {
 #if CAN_PERSIST
     SnapHeader h;
     char label[16];
-    unsigned long t0, us, modelled;
-    int loaded, ok, crc_ok;
-    eeprom_read_block(&h, (const void *)0, sizeof h);
-    if (h.magic != SNAP_MAGIC || h.variant != BENCH_VARIANT || h.workload >= WL_NUM ||
-        sizeof h + h.length > EEPROM_BYTES) {
-        printf_P(PSTR("# no snapshot of this variant in EEPROM\n"));
+    unsigned long us, modelled, h0 = heap_used();
+    int ok;
+    if (snap_read(&h, &us) != 0) {
+        printf_P(PSTR("# no valid snapshot of this variant in EEPROM\n"));
+        printf_P(PSTR("LIVE,ERROR,no_snapshot\n"));
         return;
     }
-    ee_pos = sizeof h;
-    ee_crc = 0xFFFFu;
-    t0 = micros();
-#if BENCH_VARIANT == 0
-    loaded = base_load(h.length);
-#else
-    IMPL.init();
-    loaded = abc_load(ee_get);
-#endif
-    us = micros() - t0;
-    crc_ok = ee_crc == h.crc && ee_pos == sizeof h + h.length;
-    ok = loaded == 0 && crc_ok && verify(h.workload, wl_size(h.workload));
     modelled = (unsigned long)IMPL.total_bytes();
+    if (h.workload == SNAP_LIVE) {
+        live_start();
+        live_h0 = h0;                           /* the reload's own allocations count */
+        live_n = h.count;
+        printf_P(PSTR("LIVE,LOADED,%u,%u,%lu,%lu\n"), h.count, (unsigned)(sizeof h + h.length), modelled, us);
+        return;
+    }
+    ok = verify(h.workload, wl_size(h.workload));
     IMPL.destroy();
     wl_label(h.workload, label);
     printf_P(PSTR("# variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok\n"));
     printf_P(PSTR("CSV,LOAD," VNAME ",%s,%u,%u,%lu,%d,%lu,%d\n"), label, wl_size(h.workload),
-             h.length, us, crc_ok, modelled, ok);
+             h.length, us, 1, modelled, ok);
 #else
     printf_P(PSTR("# LOAD is implemented for baseline and ABC only\n"));
+    printf_P(PSTR("LIVE,ERROR,no_persistence\n"));
 #endif
 }
 
+/* Command names live in flash (PSTR) so they take no RAM. */
+#define IS(cmd)     (strcmp_P(line, PSTR(cmd)) == 0)
+#define STARTS(cmd) (strncmp_P(line, PSTR(cmd), sizeof(cmd) - 1) == 0)
+
 void bench_command(const char *line) {
-    if (strcmp(line, "PING") == 0) {
-        printf_P(PSTR("{\"status\": \"PONG\", \"board\": \"Arduino Uno\", \"clock_mhz\": %lu, "
-                      "\"free_heap\": %ld, \"variant\": \"" VNAME "\"}\n"), CPU_MHZ, free_ram());
-    } else if (strcmp(line, "INFO") == 0) {
+    /* Commands that build their own table first free the live one. */
+    if (!(IS("PING") || STARTS("SYM ") || IS("END") || STARTS("LOOKUP ") || IS("SAVE")))
+        live_drop();
+
+    if (IS("LIVE")) {
+        cmd_live();
+    } else if (STARTS("SYM ")) {
+        cmd_sym(line + 4);
+    } else if (IS("END")) {
+        cmd_end();
+    } else if (STARTS("LOOKUP ")) {
+        cmd_lookup(line + 7);
+    } else if (IS("SAVE")) {
+        cmd_save_live();
+    } else if (IS("PING")) {
+        printf_P(PSTR("{\"status\": \"PONG\", \"board\": \"Arduino Uno\", \"firmware\": \"uno_bench\", "
+                      "\"clock_mhz\": %lu, \"free_heap\": %ld, \"static_ram\": %lu, \"variant\": \"" VNAME "\", "
+                      "\"live_symbols\": %u}\n"), CPU_MHZ, free_ram(), static_ram(), live_active ? live_n : 0u);
+    } else if (IS("INFO")) {
         cmd_info();
-    } else if (strcmp(line, "MEM") == 0) {
+    } else if (IS("MEM")) {
         cmd_mem();
-    } else if (strcmp(line, "TIME") == 0) {
+    } else if (IS("TIME")) {
         cmd_time();
-    } else if (strcmp(line, "CAP") == 0) {
+    } else if (IS("CAP")) {
         cmd_cap();
-    } else if (strncmp(line, "SAVE ", 5) == 0) {
+    } else if (STARTS("SAVE ")) {
         cmd_save((uint8_t)atoi(line + 5));
-    } else if (strcmp(line, "LOAD") == 0) {
+    } else if (IS("LOAD")) {
         cmd_load();
-    } else if (strcmp(line, "ALL") == 0) {
+    } else if (IS("ALL")) {
         cmd_info(); cmd_mem(); cmd_time(); cmd_cap();
     } else {
-        printf_P(PSTR("# commands: PING INFO MEM TIME CAP SAVE <0-%d> LOAD ALL\n"), WL_NUM - 1);
+        printf_P(PSTR("# commands: PING INFO MEM TIME CAP SAVE <0-%d> LOAD ALL | live: LIVE, "
+                      "SYM <type> <scope> <storage> <offset> <name>, END, LOOKUP <name>, SAVE\n"), WL_NUM - 1);
     }
     printf_P(PSTR("DONE\n"));
 }

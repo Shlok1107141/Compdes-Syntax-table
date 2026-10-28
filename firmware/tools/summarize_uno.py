@@ -1,6 +1,6 @@
 """Tables for firmware/results/HARDWARE_RESULTS.md from the Uno's measurements.
 
-    python firmware/tools/summarize_uno.py [--results firmware/results]
+    python firmware/tools/summarize_uno.py [--results firmware/results] [--json frontend/src/data/unoResults.json]
 
 Reads the uno_*.csv files written by collect.py. The PC column (64-bit) comes
 from the engine itself: the same symbol sets are inserted into the engine/
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -54,7 +55,9 @@ def pc_bytes() -> dict[tuple[str, str], tuple[int, int]]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default=str(ROOT / "firmware" / "results"))
-    d = Path(ap.parse_args().results)
+    ap.add_argument("--json", help="also write the figures the app shows (frontend/src/data/unoResults.json)")
+    opts = ap.parse_args()
+    d = Path(opts.results)
     mem, tim, cap = load(d / "uno_mem.csv"), load(d / "uno_time.csv"), load(d / "uno_cap.csv")
     save, restore, builds = load(d / "uno_save.csv"), load(d / "uno_load.csv"), load(d / "uno_build.csv")
     pc = pc_bytes()
@@ -135,6 +138,29 @@ def main() -> int:
                      ld["crc_ok"] if ld else "-", ld["verify_ok"] if ld else "-"])
     print(table(["Structure", "Symbol set", "Table in RAM B", "Snapshot B", "Save ms", "Reload ms", "CRC ok",
                  "Verified"], rows))
+
+    if opts.json:
+        def as_int(v, w):
+            return int(m[(v, w)]["modelled_bytes"]) if full(v, w) else None
+
+        data = {
+            "source": "firmware/results: measured on the Arduino Uno by firmware/tools/collect.py; "
+                      "written by firmware/tools/summarize_uno.py --json",
+            "same_symbols": [{
+                "set": w, "n": int(m[("baseline", w)]["n"]),
+                "uno_baseline_bytes": as_int("baseline", w),
+                "uno_baseline_held": int(m[("baseline", w)]["inserted"]),
+                "uno_abc_bytes": as_int("ABC", w),
+                "pc_baseline_bytes": pc[("ABC", w)][0], "pc_abc_bytes": pc[("ABC", w)][1],
+            } for w in sets],
+            "capacity": [{"variant": r["variant"], "fit_budget": int(r["fit_budget"]),
+                          "max_held": int(r["max_held"]), "stop": r["stop"]} for r in cap],
+            "speed": [{"variant": r["variant"], "workload": r["workload"],
+                       "insert_us": round((int(r["insert_us"]) - int(r["read_us"])) / int(r["n"]), 1),
+                       "lookup_us": round((int(r["hit_us"]) - int(r["read_us"])) / int(r["n"]), 1)}
+                      for r in tim if r["workload"] == "proto30"],
+        }
+        Path(opts.json).write_text(json.dumps(data, indent=2) + "\n", newline="\n")
     return 0
 
 

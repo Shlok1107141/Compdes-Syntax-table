@@ -1,66 +1,65 @@
-[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[baseline] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 1497, "variant": "baseline"}
+[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[baseline] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 1475, "static_ram": 487, "variant": "baseline", "live_symbols": 0}
 [baseline] DONE
 [baseline] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[baseline] CSV,INFO,baseline,16,1492,1200,0,0,0,0,2,2,2
+[baseline] CSV,INFO,baseline,16,1470,1200,0,0,0,0,2,2,2
 [baseline] DONE
 [baseline] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [baseline] CSV,MEM,baseline,proto30,30,30,none,901,773,1,0
 [baseline] CSV,MEM,baseline,esp32_sensor,23,23,none,833,705,1,0
-[baseline] CSV,MEM,baseline,realistic50,50,45,out_of_ram,1307,1179,1,0
-[baseline] CSV,MEM,baseline,random50,50,39,out_of_ram,1302,1174,1,0
+[baseline] CSV,MEM,baseline,realistic50,50,44,out_of_ram,1282,1154,1,0
+[baseline] CSV,MEM,baseline,random50,50,38,out_of_ram,1273,1145,1,0
 [baseline] CSV,MEM,baseline,scoped50,50,49,out_of_ram,1293,1165,1,0
 [baseline] DONE
 [baseline] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
 [baseline] CSV,TIME,baseline,proto30,30,2172,1644,1572,508,680,1
-[baseline] CSV,TIME,baseline,esp32_sensor,23,2160,1756,1632,516,688,1
+[baseline] CSV,TIME,baseline,esp32_sensor,23,2160,1764,1632,516,688,1
 [baseline] DONE
 [baseline] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[baseline] CSV,CAP,baseline,400,41,47,out_of_ram,1343,1343,256,1
+[baseline] CSV,CAP,baseline,400,41,46,out_of_ram,1310,1310,267,1
 [baseline] DONE
-[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [baseline] # variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us
-[baseline] CSV,SAVE,baseline,proto30,30,901,533,1024,1,1574580
+[baseline] CSV,SAVE,baseline,proto30,30,901,533,1024,1,324252
 [baseline] DONE
-[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [baseline] # variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok
-[baseline] CSV,LOAD,baseline,proto30,30,533,7856,1,901,1
+[baseline] CSV,LOAD,baseline,proto30,30,533,7904,1,901,1
 [baseline] DONE
-[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [baseline] # variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us
-[baseline] CSV,SAVE,baseline,esp32_sensor,23,833,521,1024,1,1428540
+[baseline] CSV,SAVE,baseline,esp32_sensor,23,833,521,1024,1,1431376
 [baseline] DONE
-[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[baseline] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [baseline] # variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok
-[baseline] CSV,LOAD,baseline,esp32_sensor,23,521,7996,1,833,1
+[baseline] CSV,LOAD,baseline,esp32_sensor,23,521,8056,1,833,1
 [baseline] DONE
-[A] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[A] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 1564, "variant": "A"}
+[A] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[A] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 1487, "static_ram": 483, "variant": "A", "live_symbols": 0}
 [A] DONE
 [A] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[A] CSV,INFO,A,16,1559,1200,0,0,0,0,2,2,2
+[A] CSV,INFO,A,16,1482,1200,0,0,0,0,2,2,2
 [A] DONE
 [A] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [A] CSV,MEM,A,proto30,30,30,none,781,653,1,0
 [A] CSV,MEM,A,esp32_sensor,23,23,none,741,613,1,0
 [A] CSV,MEM,A,realistic50,50,50,none,1233,1105,1,0
-[A] CSV,MEM,A,random50,50,48,out_of_ram,1352,1224,1,0
+[A] CSV,MEM,A,random50,50,45,out_of_ram,1290,1162,1,0
 [A] CSV,MEM,A,scoped50,50,50,none,1122,994,1,0
 [A] DONE
 [A] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[A] CSV,TIME,A,proto30,30,2804,2232,1536,508,640,1
-[A] CSV,TIME,A,esp32_sensor,23,2640,2288,1600,516,656,1
-[A] CSV,TIME,A,realistic50,50,4744,3788,2676,868,1096,1
-[A] CSV,TIME,A,scoped50,50,4256,3564,2252,744,936,1
+[A] CSV,TIME,A,proto30,30,2804,2232,1532,508,640,1
+[A] CSV,TIME,A,esp32_sensor,23,2640,2288,1604,516,656,1
+[A] CSV,TIME,A,scoped50,50,4256,3572,2252,736,936,1
 [A] DONE
 [A] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[A] CSV,CAP,A,400,49,58,out_of_ram,1405,1405,261,1
+[A] CSV,CAP,A,400,49,55,out_of_ram,1333,1333,256,1
 [A] DONE
-[B] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[B] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 506, "variant": "B"}
+[B] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[B] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 435, "static_ram": 1537, "variant": "B", "live_symbols": 0}
 [B] DONE
 [B] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[B] CSV,INFO,B,16,501,1200,50,468,0,0,2,2,2
+[B] CSV,INFO,B,16,430,1200,50,468,0,0,2,2,2
 [B] DONE
 [B] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [B] CSV,MEM,B,proto30,30,30,none,781,0,1,0
@@ -70,38 +69,38 @@
 [B] CSV,MEM,B,scoped50,50,50,none,1122,0,1,0
 [B] DONE
 [B] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[B] CSV,TIME,B,proto30,30,1776,1668,1552,508,640,1
-[B] CSV,TIME,B,esp32_sensor,23,1860,1776,1612,516,652,1
-[B] CSV,TIME,B,scoped50,50,2532,2488,2308,744,932,1
+[B] CSV,TIME,B,proto30,30,1772,1672,1552,508,640,1
+[B] CSV,TIME,B,esp32_sensor,23,1860,1776,1612,516,656,1
+[B] CSV,TIME,B,scoped50,50,2536,2488,2308,740,932,1
 [B] DONE
 [B] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[B] CSV,CAP,B,400,48,48,arena_full,1172,1172,480,1
+[B] CSV,CAP,B,400,48,48,arena_full,1172,1172,409,1
 [B] DONE
-[C] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[C] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 1688, "variant": "C"}
+[C] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[C] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 1611, "static_ram": 359, "variant": "C", "live_symbols": 0}
 [C] DONE
 [C] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[C] CSV,INFO,C,16,1683,1200,0,0,0,0,2,2,2
+[C] CSV,INFO,C,16,1606,1200,0,0,0,0,2,2,2
 [C] DONE
 [C] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [C] CSV,MEM,C,proto30,30,30,none,970,992,1,0
 [C] CSV,MEM,C,esp32_sensor,23,23,none,802,827,1,0
-[C] CSV,MEM,C,realistic50,50,44,out_of_ram,1351,1369,1,0
-[C] CSV,MEM,C,random50,50,34,out_of_ram,1345,1366,1,0
-[C] CSV,MEM,C,scoped50,50,44,out_of_ram,1376,1400,1,0
+[C] CSV,MEM,C,realistic50,50,42,out_of_ram,1285,1302,1,0
+[C] CSV,MEM,C,random50,50,32,out_of_ram,1281,1302,1,0
+[C] CSV,MEM,C,scoped50,50,42,out_of_ram,1291,1308,1,0
 [C] DONE
 [C] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
 [C] CSV,TIME,C,proto30,30,3140,1488,1536,508,640,1
-[C] CSV,TIME,C,esp32_sensor,23,2880,1328,1380,516,652,1
+[C] CSV,TIME,C,esp32_sensor,23,2884,1328,1376,516,652,1
 [C] DONE
 [C] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[C] CSV,CAP,C,400,38,44,out_of_ram,1389,1367,270,1
+[C] CSV,CAP,C,400,38,42,out_of_ram,1319,1300,263,1
 [C] DONE
-[AB] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[AB] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 503, "variant": "AB"}
+[AB] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[AB] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 432, "static_ram": 1540, "variant": "AB", "live_symbols": 0}
 [AB] DONE
 [AB] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[AB] CSV,INFO,AB,16,498,1200,50,671,0,0,2,2,2
+[AB] CSV,INFO,AB,16,427,1200,50,671,0,0,2,2,2
 [AB] DONE
 [AB] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [AB] CSV,MEM,AB,proto30,30,30,none,661,0,1,0
@@ -111,62 +110,60 @@
 [AB] CSV,MEM,AB,scoped50,50,50,none,922,0,1,0
 [AB] DONE
 [AB] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[AB] CSV,TIME,AB,proto30,30,2468,2304,1548,504,640,1
-[AB] CSV,TIME,AB,esp32_sensor,23,2396,2344,1608,516,652,1
-[AB] CSV,TIME,AB,realistic50,50,4188,3904,2720,864,1092,1
-[AB] CSV,TIME,AB,random50,50,4932,4600,3352,1052,1332,1
-[AB] CSV,TIME,AB,scoped50,50,3692,3720,2320,740,928,1
+[AB] CSV,TIME,AB,proto30,30,2468,2304,1544,508,640,1
+[AB] CSV,TIME,AB,esp32_sensor,23,2392,2344,1604,516,652,1
+[AB] CSV,TIME,AB,realistic50,50,4192,3900,2720,860,1092,1
+[AB] CSV,TIME,AB,random50,50,4932,4592,3348,1056,1332,1
+[AB] CSV,TIME,AB,scoped50,50,3692,3720,2320,736,932,1
 [AB] DONE
 [AB] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[AB] CSV,CAP,AB,400,50,50,arena_full,1014,1014,477,1
+[AB] CSV,CAP,AB,400,50,50,arena_full,1014,1014,406,1
 [AB] DONE
-[AC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[AC] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 1688, "variant": "AC"}
+[AC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[AC] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 1611, "static_ram": 359, "variant": "AC", "live_symbols": 0}
 [AC] DONE
 [AC] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[AC] CSV,INFO,AC,16,1683,1200,0,0,0,0,2,2,2
+[AC] CSV,INFO,AC,16,1606,1200,0,0,0,0,2,2,2
 [AC] DONE
 [AC] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [AC] CSV,MEM,AC,proto30,30,30,none,793,815,1,0
 [AC] CSV,MEM,AC,esp32_sensor,23,23,none,662,678,1,0
 [AC] CSV,MEM,AC,realistic50,50,50,none,1247,1278,1,0
-[AC] CSV,MEM,AC,random50,50,40,out_of_ram,1324,1358,1,0
+[AC] CSV,MEM,AC,random50,50,37,out_of_ram,1242,1276,1,0
 [AC] CSV,MEM,AC,scoped50,50,50,none,1190,1219,1,0
 [AC] DONE
 [AC] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[AC] CSV,TIME,AC,proto30,30,3552,2112,1536,508,640,1
-[AC] CSV,TIME,AC,esp32_sensor,23,2884,1876,1380,516,660,1
-[AC] CSV,TIME,AC,realistic50,50,6048,3744,2784,860,1092,1
-[AC] CSV,TIME,AC,scoped50,50,5412,3636,2416,740,936,1
+[AC] CSV,TIME,AC,proto30,30,3548,2112,1536,508,640,1
+[AC] CSV,TIME,AC,esp32_sensor,23,2888,1880,1380,520,652,1
 [AC] DONE
 [AC] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[AC] CSV,CAP,AC,400,48,55,out_of_ram,1390,1358,269,1
+[AC] CSV,CAP,AC,400,48,53,out_of_ram,1321,1295,261,1
 [AC] DONE
-[BC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[BC] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 508, "variant": "BC"}
+[BC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[BC] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 437, "static_ram": 1535, "variant": "BC", "live_symbols": 0}
 [BC] DONE
 [BC] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[BC] CSV,INFO,BC,16,503,1200,58,226,46,4,2,2,2
+[BC] CSV,INFO,BC,16,432,1200,58,226,46,4,2,2,2
 [BC] DONE
 [BC] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [BC] CSV,MEM,BC,proto30,30,30,none,789,0,1,0
 [BC] CSV,MEM,BC,esp32_sensor,23,23,none,662,0,1,0
-[BC] CSV,MEM,BC,realistic50,50,46,arena_full,1151,0,0,0
+[BC] CSV,MEM,BC,realistic50,50,46,arena_full,1151,0,1,0
 [BC] CSV,MEM,BC,random50,50,17,arena_full,585,0,1,0
 [BC] CSV,MEM,BC,scoped50,50,36,arena_full,905,0,1,0
 [BC] DONE
 [BC] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[BC] CSV,TIME,BC,proto30,30,2248,1852,1724,508,640,1
-[BC] CSV,TIME,BC,esp32_sensor,23,1936,1600,1500,516,652,1
+[BC] CSV,TIME,BC,proto30,30,2244,1856,1724,508,644,1
+[BC] CSV,TIME,BC,esp32_sensor,23,1928,1600,1500,516,652,1
 [BC] DONE
 [BC] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[BC] CSV,CAP,BC,400,46,46,arena_full,1157,1157,482,1
+[BC] CSV,CAP,BC,400,46,46,arena_full,1157,1157,411,1
 [BC] DONE
-[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
-[ABC] {"status": "PONG", "board": "Arduino Uno", "clock_mhz": 16, "free_heap": 460, "variant": "ABC"}
+[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
+[ABC] {"status": "PONG", "board": "Arduino Uno", "firmware": "uno_bench", "clock_mhz": 16, "free_heap": 425, "static_ram": 1547, "variant": "ABC", "live_symbols": 0}
 [ABC] DONE
 [ABC] # variant,cpu_mhz,free_ram,struct_budget,pool_nodes,pool_chars,pool_meta,pool_shadows,sizeof_int,sizeof_ptr,malloc_overhead
-[ABC] CSV,INFO,ABC,16,455,1200,67,272,54,10,2,2,2
+[ABC] CSV,INFO,ABC,16,420,1200,67,272,54,10,2,2,2
 [ABC] DONE
 [ABC] # variant,workload,n,inserted,stop,modelled_bytes,heap_bytes,verify_ok,heap_after_destroy
 [ABC] CSV,MEM,ABC,proto30,30,30,none,669,0,1,0
@@ -176,27 +173,27 @@
 [ABC] CSV,MEM,ABC,scoped50,50,50,none,1008,0,1,0
 [ABC] DONE
 [ABC] # variant,workload,n,insert_us,hit_us,miss_us,read_us,read_probe_us,verify_ok  (totals over n symbols, best of 5)
-[ABC] CSV,TIME,ABC,proto30,30,2968,2424,1760,508,680,1
+[ABC] CSV,TIME,ABC,proto30,30,2960,2428,1760,508,676,1
 [ABC] CSV,TIME,ABC,esp32_sensor,23,2484,2108,1528,516,684,1
-[ABC] CSV,TIME,ABC,realistic50,50,5512,4356,3240,864,1156,1
-[ABC] CSV,TIME,ABC,scoped50,50,4872,4232,2836,736,1000,1
+[ABC] CSV,TIME,ABC,realistic50,50,5512,4356,3240,868,1156,1
+[ABC] CSV,TIME,ABC,scoped50,50,4872,4228,2836,736,996,1
 [ABC] DONE
 [ABC] # variant,n,fit_budget,max_held,stop,bytes_at_max,modelled_at_max,free_ram_at_max,verify_ok
-[ABC] CSV,CAP,ABC,400,54,54,arena_full,1143,1143,434,1
+[ABC] CSV,CAP,ABC,400,54,54,arena_full,1143,1143,399,1
 [ABC] DONE
-[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [ABC] # variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us
-[ABC] CSV,SAVE,ABC,proto30,30,669,677,1024,1,1711264
+[ABC] CSV,SAVE,ABC,proto30,30,669,677,1024,1,1838740
 [ABC] DONE
-[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [ABC] # variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok
-[ABC] CSV,LOAD,ABC,proto30,30,677,5224,1,669,1
+[ABC] CSV,LOAD,ABC,proto30,30,677,5220,1,669,1
 [ABC] DONE
-[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [ABC] # variant,workload,n,table_bytes,snapshot_bytes,eeprom_bytes,fits,save_us
-[ABC] CSV,SAVE,ABC,esp32_sensor,23,570,578,1024,1,1402524
+[ABC] CSV,SAVE,ABC,esp32_sensor,23,570,578,1024,1,1406188
 [ABC] DONE
-[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL
+[ABC] # uno_bench ready. Commands: PING INFO MEM TIME CAP SAVE <n> LOAD ALL LIVE SYM END LOOKUP SAVE
 [ABC] # variant,workload,n,snapshot_bytes,restore_us,crc_ok,table_bytes,verify_ok
 [ABC] CSV,LOAD,ABC,esp32_sensor,23,578,4464,1,570,1
 [ABC] DONE

@@ -33,5 +33,12 @@
     "badge": "Worst case for the trie",
     "description": "Identifiers with unique initial characters: almost no prefix to share, so the trie's node cost is not repaid.",
     "code": "/* Disjoint Identifier Stress Set */\nint alpha;\nint beta;\nint gamma;\nint delta;\nint epsilon;\nint zeta;\nint eta;\nint theta;\nint iota;\nint kappa;\nint lambda;\nint mu;\nint nu;\nint xi;\nint omicron;\nint pi;\nint rho;\nint sigma;\nint tau;\nint upsilon;\nint phi;\nint chi;\nint psi;\nint omega;\n"
+  },
+  {
+    "id": "uno-demo-50",
+    "name": "Arduino Uno Demo (50 Embedded Globals)",
+    "badge": "Fills a 2 KB Uno",
+    "description": "50 subsystem_field globals. Run it on the Uno: the textbook table runs out of RAM, the compressed table holds all 50.",
+    "code": "/* 50 embedded-style globals: the realistic50 set of engine/results.csv.\n * On the Arduino Uno the textbook table runs out of RAM before the end;\n * the compressed one holds all 50. */\nfloat led;\nfloat led_data;\nchar led_state;\nfloat led_port_prev;\nunsigned int led_rate;\nint led_index_avg;\nint led_level;\nfloat handler;\nfloat handler_addr;\nunsigned int handler_type;\nint handler_head;\nint handler_max;\nfloat handler_pin;\nint handler_tail_hi;\nunsigned int stack;\nfloat stack_pin;\nchar stack_mask;\nchar stack_cfg;\nfloat stack_flag;\nfloat can;\nfloat can_cfg;\nfloat can_rate;\nfloat can_port;\nunsigned int can_cb;\nunsigned int can_count_avg;\nint can_mask;\nchar can_time;\nchar can_addr;\nfloat can_head_hi;\nchar relay;\nfloat relay_state;\nunsigned int relay_cb_cur;\nchar relay_len;\nchar relay_speed_lo;\nint relay_buf_tmp;\nchar relay_buf;\nfloat relay_flag;\nint relay_reg;\nint relay_type;\nint pump;\nunsigned int pump_pin;\nchar pump_max;\nint pump_size;\nunsigned int pump_port;\nfloat pump_err;\nunsigned int ram;\nint ram_head;\nchar ram_len_lo;\nint ram_rate;\nfloat ram_reg_next;\n"
   }
 ]

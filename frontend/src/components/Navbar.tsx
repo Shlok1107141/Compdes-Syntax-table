@@ -75,9 +75,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>ESP32 Hardware</span>
+                <span>Hardware</span>
                 <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-600 text-white font-extrabold uppercase">
-                  COM6
+                  Uno · ESP32
                 </span>
               </button>
             </div>

@@ -241,3 +241,172 @@ async def post_hardware_analyze(payload: HardwareAnalyzePayload) -> dict:
     return analyze_code_on_esp32(code=payload.code, port=payload.port)
 
 
+# --------------------------------------------------------------------------
+# Arduino Uno, live (firmware/uno_bench, see backend/hardware_uno.py). Works
+# only when this backend runs on the computer the board is plugged into.
+# --------------------------------------------------------------------------
+
+class UnoPortRequest(BaseModel):
+    port: str = Field(..., max_length=64, description="Serial port the OS lists, e.g. COM3")
+
+
+class UnoLiveRequest(UnoPortRequest):
+    code: str = Field(..., description="C source; parsed here, its declarations sent to the board")
+    delay_ms: int = Field(120, ge=0, le=1000, description="Pause between symbols, so people can watch")
+
+
+class UnoLookupRequest(UnoPortRequest):
+    name: str = Field(..., max_length=64)
+
+
+def _uno_call(port: str, fn, *args):
+    """One exchange with the board, under its lock; board errors become HTTP errors."""
+    from hardware_uno import SESSION, UnoError, check_port
+
+    try:
+        port = check_port(port)
+    except UnoError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+    if not SESSION.lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="the board is busy with another request")
+    try:
+        return fn(SESSION, port, *args)
+    except UnoError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+    finally:
+        SESSION.lock.release()
+
+
+@app.get("/hardware/ports")
+def hardware_ports() -> dict:
+    """Serial ports on this computer, with a guess at what is plugged into each."""
+    from hardware_uno import SESSION, list_ports
+
+    return {"ports": list_ports(), "connected": SESSION.port}
+
+
+@app.get("/hardware/uno/status")
+def uno_status(port: str) -> dict:
+    from hardware_uno import status
+
+    return _uno_call(port, status)
+
+
+@app.post("/hardware/uno/lookup")
+def uno_lookup(payload: UnoLookupRequest) -> dict:
+    from hardware_uno import lookup
+
+    return _uno_call(payload.port, lookup, payload.name)
+
+
+@app.post("/hardware/uno/save")
+def uno_save(payload: UnoPortRequest) -> dict:
+    from hardware_uno import save
+
+    return _uno_call(payload.port, save)
+
+
+@app.post("/hardware/uno/load")
+def uno_load(payload: UnoPortRequest) -> dict:
+    from hardware_uno import load
+
+    return _uno_call(payload.port, load)
+
+
+@app.post("/hardware/uno/reset")
+def uno_reset(payload: UnoPortRequest) -> dict:
+    """Reopen the port, which resets the Uno: its RAM (and the table in it) is cleared."""
+    from hardware_uno import status
+
+    def reset_then_status(session, port):
+        session.reset(port)
+        return status(session, port)
+
+    return _uno_call(payload.port, reset_then_status)
+
+
+@app.post("/hardware/uno/disconnect")
+def uno_disconnect() -> dict:
+    """Release the port, e.g. so flash.py can upload new firmware."""
+    from hardware_uno import SESSION
+
+    if not SESSION.lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="the board is busy with another request")
+    try:
+        SESSION.close()
+    finally:
+        SESSION.lock.release()
+    return {"connected": None}
+
+
+@app.post("/hardware/uno/live")
+async def uno_live(payload: UnoLiveRequest, request: Request):
+    """Parse the code, then insert its declarations on the board one by one.
+
+    Streams newline-delimited JSON events: start, symbol (one per declaration,
+    with what the board reported), done, or error. Every byte count in them
+    comes from the board, except avr_baseline_model_bytes (see hardware_uno).
+    """
+    import asyncio
+    import json
+
+    from fastapi.responses import StreamingResponse
+    from starlette.concurrency import run_in_threadpool
+
+    from hardware_uno import (SESSION, UnoError, avr_baseline_bytes, check_port, decode_symbols,
+                              live_end, live_insert, live_ready)
+
+    _check_rate_limit(request)
+    size = len(payload.code.encode("utf-8"))
+    if size > MAX_CODE_BYTES:
+        raise HTTPException(status_code=413, detail=f"source is {size} bytes; the limit is {MAX_CODE_BYTES}")
+    try:
+        port = check_port(payload.port)
+    except UnoError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+    if SESSION.lock.locked():
+        raise HTTPException(status_code=409, detail="the board is busy with another request")
+    async with _get_semaphore():
+        try:
+            result = await analyze_source(payload.code)
+        except EngineError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from None
+    symbols, skipped = decode_symbols(result["symbol_table"])
+
+    def line(event: dict) -> bytes:
+        return (json.dumps(event) + "\n").encode()
+
+    async def events():
+        # The lock is taken here, not in the endpoint, so a stream that never
+        # starts cannot leave the board locked.
+        if not SESSION.lock.acquire(blocking=False):
+            yield line({"event": "error", "status": 409, "detail": "the board is busy with another request"})
+            return
+        try:
+            ready = await run_in_threadpool(live_ready, SESSION, port)
+            yield line({"event": "start", "port": port, **ready, "total": len(symbols), "skipped": skipped,
+                        "pc": {"baseline_bytes": result["baseline_bytes"],
+                               "compressed_bytes": result["compressed_bytes"],
+                               "savings_pct": result["savings_pct"]}})
+            for i, sym in enumerate(symbols):
+                board = await run_in_threadpool(live_insert, SESSION, port, sym)
+                info = {k: sym[k] for k in ("name", "type", "scope", "storage_class", "offset")}
+                yield line({"event": "symbol", "index": i, **info, **board})
+                if payload.delay_ms:
+                    await asyncio.sleep(payload.delay_ms / 1000)
+            done = await run_in_threadpool(live_end, SESSION, port)
+            stored = [s["name"] for s in symbols[:done["stored"]]]
+            model = avr_baseline_bytes(stored) if stored else None
+            saving = (round(100 * (1 - done["table_bytes"] / model), 2)
+                      if model and ready["variant"] != "baseline" else None)
+            yield line({"event": "done", **done, "variant": ready["variant"], "total": len(symbols),
+                        "refused": len(symbols) - done["stored"],
+                        "avr_baseline_model_bytes": model, "saving_vs_model_pct": saving})
+        except UnoError as exc:
+            yield line({"event": "error", "status": exc.status_code, "detail": exc.detail})
+        finally:
+            SESSION.lock.release()
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
+
+

@@ -6,6 +6,7 @@ import { SymbolTableView } from './components/SymbolTableView';
 import { RadixTrieVisualizer } from './components/RadixTrieVisualizer';
 import { SyntaxTableSuite } from './components/SyntaxTableSuite';
 import { HardwareTelemetry } from './components/HardwareTelemetry';
+import { UnoLive } from './components/UnoLive';
 import { ErrorBanner } from './components/ErrorBanner';
 import { SAMPLE_PRESETS } from './data/sampleCodes';
 import type { SamplePreset } from './data/sampleCodes';
@@ -15,6 +16,7 @@ import { BarChart3, Hash, Network } from 'lucide-react';
 
 export function App() {
   const [mainView, setMainView] = useState<'symbol' | 'syntax' | 'hardware'>('symbol');
+  const [hardwareBoard, setHardwareBoard] = useState<'uno' | 'esp32'>('uno');
   const [code, setCode] = useState<string>(SAMPLE_PRESETS[0].code);
   const [selectedPresetId, setSelectedPresetId] = useState<string>(SAMPLE_PRESETS[0].id);
   const [mode, setMode] = useState<ExecutionMode>('offline');
@@ -156,7 +158,7 @@ export function App() {
               : 'text-slate-600'
           }`}
         >
-          Hardware (COM6)
+          Hardware
         </button>
       </div>
 
@@ -165,7 +167,17 @@ export function App() {
         {mainView === 'syntax' ? (
           <SyntaxTableSuite />
         ) : mainView === 'hardware' ? (
-          <HardwareTelemetry currentCode={code} />
+          <div className="space-y-4">
+            <div className="inline-flex p-1 rounded-lg bg-slate-100 border-2 border-slate-300 text-xs font-bold">
+              {([['uno', 'Arduino Uno (live)'], ['esp32', 'ESP32']] as const).map(([id, label]) => (
+                <button key={id} type="button" onClick={() => setHardwareBoard(id)}
+                  className={`px-3 py-1.5 rounded-md ${hardwareBoard === id ? 'bg-teal-800 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {hardwareBoard === 'uno' ? <UnoLive editorCode={code} /> : <HardwareTelemetry currentCode={code} />}
+          </div>
         ) : (
           <>
             {/* Error / Status Alerts */}
