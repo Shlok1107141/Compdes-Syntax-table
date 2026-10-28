@@ -130,7 +130,7 @@ Compdes-Syntax-table/
 | Engine | GCC 11+ (any C11 compiler for plain builds; GCC or Clang for `-fsanitize`), GNU make | GCC 13.3, 15.2 |
 | Backend | Python 3.10+ with `venv` (Debian/Ubuntu: `sudo apt install python3-venv`) | Python 3.11, 3.12 |
 | Frontend | Node.js 20.19+ or 22.12+ (Vite 8), npm 10+ | Node 20, 22 |
-| Disk / network | about 600 MB after setup (mostly `frontend/node_modules`); internet access during setup | |
+| Disk / network | about 250 MB after setup (mostly `frontend/node_modules`); internet access during setup | |
 | *Optional:* whole stack | Docker 24+ with Compose v2 | |
 | *Optional:* hardware | Arduino Uno (ATmega328P) + `arduino-cli` with core `arduino:avr@1.8.7`; ESP32 + PlatformIO | |
 | *Optional:* manuscript | Overleaf, or TeX Live 2022+ (`latexmk`, pdfLaTeX) | TeX Live (GitHub Actions) |
