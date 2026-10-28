@@ -32,6 +32,27 @@ export function declaredNames(code: string): { names: string[]; source: 'engine'
 }
 
 /**
+ * What the browser sends to a board over Web Serial: each declaration with its
+ * packed metadata word. The engine's own output for the built-in samples (with
+ * the PC figures for the same program); the approximate parser otherwise.
+ */
+export function boardProgram(code: string): {
+  symbols: { name: string; type: string; scope: number; storage_class: string; offset: number; packed: number }[];
+  source: 'engine' | 'approximate';
+  pc?: { baseline_bytes: number; compressed_bytes: number; savings_pct: number };
+} {
+  const exact = offlineResultFor(code);
+  const r = exact ?? analyzeCodeSimulated(code);
+  return {
+    symbols: r.symbol_table.map((s) => ({ name: s.name, type: s.type, scope: s.scope, storage_class: s.storage_class,
+      offset: s.offset, packed: s.packed ?? 0 })),
+    source: exact ? 'engine' : 'approximate',
+    pc: exact ? { baseline_bytes: exact.baseline_bytes, compressed_bytes: exact.compressed_bytes,
+      savings_pct: exact.savings_pct } : undefined,
+  };
+}
+
+/**
  * Client-side C parser and compression model for custom user-written C code
  * when running offline without a live backend.
  */

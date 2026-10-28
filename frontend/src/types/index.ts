@@ -131,8 +131,9 @@ export type UnoLiveEvent =
       budget: number;
       total: number;
       skipped: { name: string; reason: string }[];
-      /** The same program measured by the engine on the PC (64-bit). */
-      pc: { baseline_bytes: number; compressed_bytes: number; savings_pct: number };
+      /** The same program measured by the engine on the PC (64-bit); absent when the
+       * declarations came from the browser's approximate parser. */
+      pc?: { baseline_bytes: number; compressed_bytes: number; savings_pct: number };
     }
   | {
       event: 'symbol';
@@ -164,6 +165,8 @@ export type UnoLiveEvent =
       /** Textbook table for the stored symbols on the Uno: a model, exact on every set measured. */
       avr_baseline_model_bytes: number | null;
       saving_vs_model_pct: number | null;
+      /** Mean time to find one stored name, timed on the board after the inserts. */
+      lookup_us_mean?: number | null;
     }
   | { event: 'error'; status: number; detail: string };
 
