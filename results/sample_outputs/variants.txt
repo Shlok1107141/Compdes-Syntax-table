@@ -1,0 +1,185 @@
+=== Variant A: bit-packing in isolation ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT A (bit-packed metadata only) ---
+    sizeof(PNode)        : 24 B  (baseline HNode = 32 B)
+    bucket array         : 512 B
+    live allocations     : 60 (1013 B payload + 960 B overhead)
+    TOTAL                : 2485 B  (82.8 B/symbol)
+
+>>> Variant A: bit-packing in isolation vs baseline: -8.8% memory (-240 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30         0 / 30
+  1024      6 / 30         7 / 30
+  1536     13 / 30        15 / 30
+  2048     20 / 30        23 / 30
+
+=== Variant B: arena + 16-bit indices in isolation ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT B (flat arena + 16-bit indices only) ---
+    sizeof(ANode)        : 20 B  (baseline HNode = 32 B)
+    nodes                : 30 x 20 = 600 B
+    char pool (full names): 293 B
+    bucket array         : 128 B  (uint16_t heads)
+    allocator overhead   : 0 B (no malloc)
+    TOTAL                : 1021 B  (34.0 B/symbol)
+
+>>> Variant B: arena + 16-bit indices in isolation vs baseline: -62.5% memory (-1704 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30        12 / 30
+  1024      6 / 30        30 / 30
+  1536     13 / 30        30 / 30
+  2048     20 / 30        30 / 30
+
+=== Variant C: radix trie in isolation ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT C (radix trie prefix sharing only) ---
+    sizeof(TNode)        : 40 B, sizeof(Meta) = 16 B
+    trie nodes           : 41 (incl. root)
+    edge label bytes     : 139 B  (vs 293 B of full names in baseline)
+    live allocations     : 111 (2259 B payload + 1776 B overhead)
+    TOTAL                : 4035 B  (134.5 B/symbol)
+
+>>> Variant C: radix trie in isolation vs baseline: +48.1% memory (1310 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30         3 / 30
+  1024      6 / 30         7 / 30
+  1536     13 / 30        11 / 30
+  2048     20 / 30        15 / 30
+
+=== Variant AB: arena + bit-packing ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT AB (arena + 16-bit indices + bit-packed meta, linear strings) ---
+    sizeof(ABNode)       : 8 B  (baseline HNode = 32 B)
+    nodes                : 30 x 8 = 240 B
+    char pool (full names): 293 B
+    bucket array         : 128 B  (uint16_t heads)
+    allocator overhead   : 0 B (no malloc)
+    TOTAL                : 661 B  (22.0 B/symbol)
+
+>>> Variant AB: arena + bit-packing vs baseline: -75.7% memory (-2064 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30        21 / 30
+  1024      6 / 30        30 / 30
+  1536     13 / 30        30 / 30
+  2048     20 / 30        30 / 30
+
+=== Variant AC: trie + bit-packing ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT AC (radix trie + bit-packed meta, pointers + malloc) ---
+    sizeof(TNode)        : 32 B
+    trie nodes           : 41 (incl. root)
+    edge label bytes     : 139 B  (vs 293 B of full names in baseline)
+    live allocations     : 81 (1451 B payload + 1296 B overhead)
+    TOTAL                : 2747 B  (91.6 B/symbol)
+
+>>> Variant AC: trie + bit-packing vs baseline: +0.8% memory (22 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30         4 / 30
+  1024      6 / 30        10 / 30
+  1536     13 / 30        16 / 30
+  2048     20 / 30        21 / 30
+
+=== Variant BC: trie + arena ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT BC (radix trie + arena/16-bit indices, unpacked meta) ---
+    sizeof(TrieNode)     : 10 B, sizeof(Meta) = 16 B
+    trie nodes           : 41 x 10 = 410 B (incl. root)
+    char pool            : 139 B  (vs 293 B of full names in baseline)
+    meta pool            : 30 x 16 = 480 B (unpacked)
+    allocator overhead   : 0 B (no malloc)
+    TOTAL                : 1029 B  (34.3 B/symbol)
+
+>>> Variant BC: trie + arena vs baseline: -62.2% memory (-1696 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30        14 / 30
+  1024      6 / 30        29 / 30
+  1536     13 / 30        30 / 30
+  2048     20 / 30        30 / 30
+
+=== Variant ABC: all three techniques ===
+
+Correctness: PASS (30 identifiers)
+
+--- BASELINE (hash + malloc + pointers + unpacked ints) ---
+    sizeof(HNode)        : 32 B
+    bucket array         : 512 B
+    live allocations     : 60 (1253 B payload + 960 B overhead)
+    TOTAL                : 2725 B  (90.8 B/symbol)
+
+--- VARIANT ABC (radix trie + arena/16-bit indices + bit-packed meta) ---
+    sizeof(TrieNode)     : 10 B
+    trie nodes           : 41 x 10 = 410 B (incl. root)
+    char pool            : 139 B  (vs 293 B of full names in baseline)
+    meta pool            : 30 x 4 = 120 B (packed)
+    allocator overhead   : 0 B (no malloc)
+    TOTAL                : 669 B  (22.3 B/symbol)
+
+>>> Variant ABC: all three techniques vs baseline: -75.4% memory (-2056 B)
+
+--- Identifiers that fit in fixed RAM budget ---
+  Budget   Baseline       Variant       
+  512       0 / 30        22 / 30
+  1024      6 / 30        30 / 30
+  1536     13 / 30        30 / 30
+  2048     20 / 30        30 / 30
+

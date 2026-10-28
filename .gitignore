@@ -5,6 +5,7 @@ engine/symtab_demo
 engine/symtab_stress
 engine/symtab_analyze
 engine/symtab_bench
+engine/syntax_bench
 engine/*_san
 engine/variant_*
 !engine/variant_*.c
@@ -23,6 +24,15 @@ venv/
 node_modules/
 dist/
 build/
+
+# Local settings (templates: backend/.env.example, frontend/.env.example)
+.env
+*.env.local
+
+# Downloaded and regenerated data (scripts/reproduce_results.sh, datasets/fetch_corpus.py)
+datasets/corpus/
+datasets/downloads/
+results/regenerated/
 
 # OS & IDE
 .DS_Store
