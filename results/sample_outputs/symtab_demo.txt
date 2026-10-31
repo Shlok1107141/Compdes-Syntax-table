@@ -1,0 +1,27 @@
+=== Memory-Constrained Compressed Symbol Table -- Prototype ===
+
+sizeof(HNode)   [baseline node] = 32 bytes
+sizeof(TrieNode)[compressed node] = 10 bytes
+
+Correctness: PASS -- all 30 identifiers inserted and looked up correctly in both structures.
+
+--- Baseline (hash table, chaining, per-node malloc) ---
+  bucket array          : 512 bytes
+  nodes + name strings  : 2213 bytes (incl. 16 B/alloc overhead est.)
+  TOTAL                 : 2725 bytes  (90.8 bytes/symbol)
+
+--- Compressed (radix trie + arena + bit-packed meta) ---
+  trie nodes   : 41 used x 10 B = 410 bytes
+  char pool    : 139 bytes (shared prefixes stored once)
+  metadata pool: 30 used x 4 B = 120 bytes
+  TOTAL                 : 669 bytes  (22.3 bytes/symbol)
+
+=== Compressed table uses 75.4% less memory than baseline for 30 identifiers ===
+
+--- Simulated fixed RAM budget: identifiers fit before exhaustion ---
+  Budget     Baseline fits      Compressed fits   
+  512        0 / 30             22 / 30           
+  1024       6 / 30             30 / 30 (all)     
+  1536       13 / 30            30 / 30 (all)     
+  2048       20 / 30            30 / 30 (all)     
+

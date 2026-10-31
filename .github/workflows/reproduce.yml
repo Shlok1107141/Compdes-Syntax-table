@@ -1,0 +1,73 @@
+name: Reproduce
+
+# A clean machine, nothing but the repository: run the documented setup, every test
+# suite and the result regeneration exactly as README.md tells a new user to, and
+# compile the manuscript's LaTeX zip the way Overleaf would (full TeX Live).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-clone:
+    name: fresh clone (setup, test, reproduce)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: scripts/setup.sh
+        run: bash scripts/setup.sh
+
+      - name: scripts/test.sh
+        run: bash scripts/test.sh
+
+      - name: scripts/reproduce_results.sh --corpus
+        run: bash scripts/reproduce_results.sh --corpus
+
+      - name: Keep the regenerated results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-results
+          path: results/regenerated/
+
+  manuscript:
+    name: manuscript (LaTeX zip compiles)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unpack the Overleaf zip
+        run: mkdir -p build && cd build && unzip -q ../docs/manuscript/DenseSym_Draft2_LaTeX.zip
+
+      - name: Compile with pdfLaTeX (TeX Live)
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+          working_directory: build
+
+      - name: Keep the PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: manuscript-pdf
+          path: build/main.pdf
