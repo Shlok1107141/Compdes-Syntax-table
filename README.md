@@ -25,6 +25,10 @@ Everything needed to rebuild, run and re-measure the project without its authors
 | 8 | Execution scripts | [`scripts/setup.sh`](scripts/setup.sh), [`scripts/test.sh`](scripts/test.sh), [`scripts/run.sh`](scripts/run.sh), [`scripts/reproduce_results.sh`](scripts/reproduce_results.sh) |
 | 9 | Results | [`results/`](results/) (index, metrics, sample outputs), [`engine/*.csv`](engine/), [`engine/EVALUATION.md`](engine/EVALUATION.md), [`firmware/results/`](firmware/results/) |
 | 10 | Documentation: manuscript (Draft 2, PDF) | [`docs/manuscript/DenseSym_Draft2.pdf`](docs/manuscript/DenseSym_Draft2.pdf) |
+| 11 | Demo video (6 min 19 s, voice-over and subtitles) | [`docs/demo/DenseSym_demo.mp4`](docs/demo/DenseSym_demo.mp4), subtitles in [`DenseSym_demo.srt`](docs/demo/DenseSym_demo.srt) |
+
+**Submitted version:** release [`v1.0.0`](https://github.com/Shlok1107141/Compdes-Syntax-table/releases/tag/v1.0.0)
+of <https://github.com/Shlok1107141/Compdes-Syntax-table>.
 
 The **Reproduce** workflow checks this on every push: on a clean Ubuntu machine it runs
 `scripts/setup.sh`, `scripts/test.sh` and `scripts/reproduce_results.sh --corpus` exactly as
