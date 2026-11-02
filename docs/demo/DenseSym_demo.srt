@@ -1,0 +1,295 @@
+1
+00:00:00,800 --> 00:00:03,320
+Hi! In this video I'll run DenseSym,
+
+2
+00:00:03,170 --> 00:00:08,126
+our compressed compiler symbol table, and show you how the website works.
+
+3
+00:00:08,326 --> 00:00:13,674
+Every compiler keeps a symbol table: for each identifier it records the type,
+
+4
+00:00:13,524 --> 00:00:17,116
+the scope, the storage class and the memory offset.
+
+5
+00:00:17,316 --> 00:00:20,351
+The textbook version is a chained hash table,
+
+6
+00:00:20,201 --> 00:00:26,250
+which pays for 8-byte pointers and a separate heap allocation for every node and every name.
+
+7
+00:00:26,450 --> 00:00:34,212
+DenseSym stores exactly the same information with three techniques: a Patricia trie that shares common prefixes,
+
+8
+00:00:34,062 --> 00:00:40,736
+flat arenas addressed by 16-bit indices, and all the attributes bit-packed into one 32-bit word.
+
+9
+00:00:42,586 --> 00:00:44,200
+This is the workbench.
+
+10
+00:00:44,400 --> 00:00:48,115
+On the left is a C source editor with ready-made presets,
+
+11
+00:00:47,965 --> 00:00:51,054
+and on the right are three views of the result.
+
+12
+00:00:51,254 --> 00:00:57,532
+Right now the site is in offline mode: it shows results that our C engine computed in advance,
+
+13
+00:00:57,382 --> 00:01:00,140
+so the page works even without a server.
+
+14
+00:01:00,340 --> 00:01:06,590
+The first preset is an embedded sensor module with 30 global identifiers,
+
+15
+00:01:06,440 --> 00:01:09,682
+like counter, temp_max and sensor_id.
+
+16
+00:01:11,532 --> 00:01:14,394
+The Metrics tab answers the main question.
+
+17
+00:01:14,594 --> 00:01:23,552
+The textbook hash table needs 2,725 bytes for these 30 names, and DenseSym needs 669.
+
+18
+00:01:23,752 --> 00:01:28,342
+That's 75% less memory, or about 4.1 times denser.
+
+19
+00:01:28,542 --> 00:01:33,684
+Below that, the ablation benchmark switches each technique on and off.
+
+20
+00:01:33,884 --> 00:01:40,138
+Bit-packing alone saves under 9%, and the trie on its own actually makes the table bigger,
+
+21
+00:01:39,988 --> 00:01:44,954
+because every trie node is a separate heap object with 8-byte pointers.
+
+22
+00:01:45,154 --> 00:01:50,541
+Arena allocation with bit-packing delivers almost the whole saving,
+
+23
+00:01:50,391 --> 00:01:54,136
+and all three techniques together reach 75.4%.
+
+24
+00:01:54,636 --> 00:01:57,906
+At the bottom is peak memory with scope release.
+
+25
+00:01:58,106 --> 00:02:03,648
+If the compiler frees each block's symbols when the block closes,
+
+26
+00:02:03,498 --> 00:02:08,792
+the largest table it ever needs drops from 2,432 bytes to 601.
+
+27
+00:02:10,642 --> 00:02:15,208
+The Symbol Table tab lists every declaration the engine extracted.
+
+28
+00:02:15,408 --> 00:02:20,766
+Each row has the type, the scope depth, the storage class and the memory offset.
+
+29
+00:02:20,966 --> 00:02:25,808
+The last column is the 32-bit word DenseSym actually stores:
+
+30
+00:02:25,658 --> 00:02:30,812
+4 bits of type, 8 of scope, 4 of storage class and 16 of offset.
+
+31
+00:02:31,012 --> 00:02:35,026
+I can also search it, so let me look for everything named temp.
+
+32
+00:02:36,876 --> 00:02:41,130
+The Radix Trie Visualizer shows how the names are actually stored.
+
+33
+00:02:41,330 --> 00:02:46,832
+Every box is a 10-byte node in the arena, labelled with its arena index.
+
+34
+00:02:47,032 --> 00:02:53,117
+Shared prefixes are stored only once: counter and config share "co",
+
+35
+00:02:52,967 --> 00:02:56,782
+which then branches into "unt" and "nfig".
+
+36
+00:02:56,982 --> 00:03:02,796
+41 nodes and 139 bytes of characters hold all 30 names.
+
+37
+00:03:04,646 --> 00:03:08,660
+Different code behaves differently, so let's try another preset.
+
+38
+00:03:09,860 --> 00:03:16,058
+In this UART driver, every function reuses the same local names, like i and len.
+
+39
+00:03:16,258 --> 00:03:25,530
+DenseSym saves 81.65% here: a name declared again in another function costs only a packed word and a small shadow record,
+
+40
+00:03:25,380 --> 00:03:28,696
+not a new node and a new copy of the name.
+
+41
+00:03:29,396 --> 00:03:34,298
+And here is the worst case: identifiers that share no prefixes at all.
+
+42
+00:03:34,498 --> 00:03:37,330
+The trie has almost nothing to share,
+
+43
+00:03:37,180 --> 00:03:41,680
+but the arena and bit-packing still cut the memory by 77.9%.
+
+44
+00:03:43,530 --> 00:03:47,760
+Now the most important part: analyzing code that I write myself.
+
+45
+00:03:47,960 --> 00:03:52,815
+I'll switch to Live Backend. The badge now says the engine is online,
+
+46
+00:03:52,665 --> 00:03:59,294
+so every request goes to our FastAPI service, which runs the C analyzer as a sandboxed process.
+
+47
+00:03:59,794 --> 00:04:02,945
+I'll clear the editor and type a small program:
+
+48
+00:04:02,795 --> 00:04:07,288
+two global sensor variables, and a function with one local variable.
+
+49
+00:04:09,488 --> 00:04:14,554
+When I press Analyze, the engine tokenizes the code, tracks every scope,
+
+50
+00:04:14,404 --> 00:04:20,630
+builds all eight structures, and verifies every lookup before it reports a single number.
+
+51
+00:04:20,830 --> 00:04:27,428
+For these four declarations, the textbook table needs 815 bytes,
+
+52
+00:04:27,278 --> 00:04:30,652
+and DenseSym only 121: 85% less.
+
+53
+00:04:30,852 --> 00:04:34,638
+In the symbol table, local_val sits at scope depth 1,
+
+54
+00:04:34,488 --> 00:04:37,794
+inside the function, with its own packed word.
+
+55
+00:04:37,994 --> 00:04:43,426
+The service is hardened too: the code is only parsed and never run,
+
+56
+00:04:43,276 --> 00:04:47,840
+input is capped at 64 KB, and requests are rate limited.
+
+57
+00:04:49,690 --> 00:04:51,688
+Next, the Hardware tab.
+
+58
+00:04:51,888 --> 00:04:58,125
+We ran all eight structures on a real Arduino Uno, which has only 2 KB of RAM,
+
+59
+00:04:57,975 --> 00:05:03,198
+and everything here was measured on the board: 468 runs in total.
+
+60
+00:05:03,398 --> 00:05:11,540
+For the 30-name preset, the textbook table takes 901 bytes on the board, and DenseSym 669.
+
+61
+00:05:11,740 --> 00:05:17,092
+With 50 globals, the textbook table runs out of memory at name 49,
+
+62
+00:05:16,942 --> 00:05:19,378
+while DenseSym stores all 50.
+
+63
+00:05:19,578 --> 00:05:24,164
+And when an Uno is plugged in, the page connects to it over Web Serial,
+
+64
+00:05:24,014 --> 00:05:27,912
+so any program in the editor can be built live on the board.
+
+65
+00:05:29,762 --> 00:05:33,999
+The site also hosts a second tool: the syntax table suite,
+
+66
+00:05:33,849 --> 00:05:37,664
+which compresses the parse tables an LR parser uses.
+
+67
+00:05:37,864 --> 00:05:44,578
+For the ANSI C grammar, row displacement shrinks the table from 51,544 bytes to 12,844,
+
+68
+00:05:44,428 --> 00:05:50,086
+and the suite also measures lookup speed, build time and cache behaviour.
+
+69
+00:05:51,936 --> 00:05:55,038
+Everything you've seen is open source on GitHub.
+
+70
+00:05:55,238 --> 00:06:01,454
+The repository has setup, test and run scripts, the datasets with their download links,
+
+71
+00:06:01,304 --> 00:06:07,868
+every result file, and the manuscript, both as a PDF and as an Overleaf-ready LaTeX project.
+
+72
+00:06:08,068 --> 00:06:12,732
+A workflow rebuilds the whole project on a clean machine at every push,
+
+73
+00:06:12,582 --> 00:06:15,466
+and checks that every result still matches.
+
+74
+00:06:16,066 --> 00:06:18,088
+Thanks for watching!
